@@ -44,11 +44,18 @@ internal sealed class Galaxy : Engine {
     }
 
     public override void Update(in Graphics g, in float deltaTime) {
-        UpdateKeysHeld();
-        ApplyKeysHeld(deltaTime);
+        HandleInput(deltaTime);
 
         universeSelectedCoords.x = Math.Max(Math.Min(WindowSize.Width, universeSelectedCoords.x), 0);
         universeSelectedCoords.y = Math.Max(Math.Min(WindowSize.Height, universeSelectedCoords.y), 0);
+
+        RenderGalaxy(g);
+        RenderSelectedSystem(g);
+        RenderSelectedPlanet(g);
+    }
+
+    private void RenderGalaxy(Graphics g) {
+        if (selectedPlanet != null) return;
 
         int xSectors = WindowSize.Width / SECTORSIZE;
         int ySectors = WindowSize.Height / SECTORSIZE;
@@ -57,7 +64,7 @@ internal sealed class Galaxy : Engine {
         for (currentSector.y = 0; currentSector.y < ySectors; currentSector.y++) {
             for (currentSector.x = 0; currentSector.x < xSectors; currentSector.x++) {
                 var system = new SolarSystem(
-                    currentSector.x + (uint)universeOffset.x, 
+                    currentSector.x + (uint)universeOffset.x,
                     currentSector.y + (uint)universeOffset.y);
 
                 if (!system.StarExists) continue;
@@ -67,10 +74,10 @@ internal sealed class Galaxy : Engine {
                 int starW = (int)system.StarDiameter / (SECTORSIZE / 2);
                 int starH = (int)system.StarDiameter / (SECTORSIZE / 2);
 
-                g.FillEllipse(brush, 
-                    x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - (starW / 2), 
+                g.FillEllipse(brush,
+                    x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - (starW / 2),
                     y: currentSector.y * SECTORSIZE + (SECTORSIZE / 2) - (starH / 2),
-                    width: starW, 
+                    width: starW,
                     height: starH);
 
                 if (!(universeSelectedCoords.x / SECTORSIZE == currentSector.x && universeSelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
@@ -84,17 +91,6 @@ internal sealed class Galaxy : Engine {
         }
 
         g.DrawRectangle(Pens.Red, universeSelectedCoords.x, universeSelectedCoords.y, SECTORSIZE, SECTORSIZE);
-
-        g.DrawString($"{selectedSystem?.Planets.Count}", SystemFonts.DefaultFont, Brushes.White, 0f, 0f);
-
-        if (_keysHeld.Contains(' ')) {
-            UpdateSelectedSystem();
-        }
-        if (_keysHeld.Contains((char)13)) {
-            UpdateSelectedPlanet();
-        }
-        RenderSelectedSystem(g);
-        RenderSelectedPlanet(g);
     }
 
     private void UpdateSelectedSystem() {
@@ -204,14 +200,10 @@ internal sealed class Galaxy : Engine {
         int worldSize = (int)selectedPlanet.Diameter;
 
         (int x, int y) selected = toScreen(planetSelectedCoords.x, planetSelectedCoords.y);
-        if (_keysHeld.Contains(' ')) {
-            selectedPlanet.World[planetSelectedCoords.y * worldSize + planetSelectedCoords.x]++;
-        }
 
         for (int y = 0; y < worldSize; y++) {
             for (int x = 0; x < worldSize; x++) {
                 selectedPlanet.World[y * worldSize + x] %= _coloredTiles.Length + 1;
-                //if (selectedPlanet.World[y * worldSize + x] == 0) selectedPlanet.World[y * worldSize + x] = 1;
 
                 (int x, int y) sCoord = toScreen(x, y);
 
@@ -232,35 +224,23 @@ internal sealed class Galaxy : Engine {
             _infoFont, Brushes.Black, 0, 0);
     }
 
-    private void UpdateKeysHeld() {
-        _keysHeld.Clear();
+    private void HandleInput(in float deltaTime) {
+        if (Input.GetKeyUp(' ')) {
+            if (selectedPlanet != null && selectedPlanet.World != null) {
+                selectedPlanet.World[planetSelectedCoords.y * (int)selectedPlanet.Diameter + planetSelectedCoords.x]++;
+            } else if (selectedSystem != null) {
+                UpdateSelectedPlanet();
+            } else {
+                UpdateSelectedSystem();
+            }
+        }
 
-        if (Input.GetKeyDown('W')) _keysHeld.Add('W');
-        if (Input.GetKeyDown('A')) _keysHeld.Add('A');
-        if (Input.GetKeyDown('S')) _keysHeld.Add('S');
-        if (Input.GetKeyDown('D')) _keysHeld.Add('D');
+        if (Input.GetKeyDown('W')) universeOffset.y -= UNIVERSE_NAV_SPEED * deltaTime;
+        if (Input.GetKeyDown('A')) universeOffset.x -= UNIVERSE_NAV_SPEED * deltaTime;
+        if (Input.GetKeyDown('S')) universeOffset.y += UNIVERSE_NAV_SPEED * deltaTime;
+        if (Input.GetKeyDown('D')) universeOffset.x += UNIVERSE_NAV_SPEED * deltaTime;
 
-        if (Input.GetKeyDown('I')) _keysHeld.Add('I');
-        if (Input.GetKeyDown('J')) _keysHeld.Add('J');
-        if (Input.GetKeyDown('K')) _keysHeld.Add('K');
-        if (Input.GetKeyDown('L')) _keysHeld.Add('L');
-
-        if (Input.GetKeyDown(' ')) _keysHeld.Add(' ');
-        if (Input.GetKeyDown((char)27)) _keysHeld.Add((char)27); // escape
-        if (Input.GetKeyDown((char)13)) _keysHeld.Add((char)13); // enter
-    }
-
-    private void ApplyKeysHeld(in float deltaTime) {
-        if (_keysHeld.Contains('W')) universeOffset.y -= UNIVERSE_NAV_SPEED * deltaTime;
-        if (_keysHeld.Contains('A')) universeOffset.x -= UNIVERSE_NAV_SPEED * deltaTime;
-        if (_keysHeld.Contains('S')) universeOffset.y += UNIVERSE_NAV_SPEED * deltaTime;
-        if (_keysHeld.Contains('D')) universeOffset.x += UNIVERSE_NAV_SPEED * deltaTime;
-
-        
-        moveCooldown += deltaTime;
-        if (moveCooldown <= 0.15f) return;
-        
-        if (_keysHeld.Contains((char)27)) {
+        if (Input.GetKeyUp((char)27)) {
             if (selectedPlanet != null) {
                 selectedPlanet = null;
             } else {
@@ -268,25 +248,28 @@ internal sealed class Galaxy : Engine {
             }
         }
         
+        moveCooldown += deltaTime;
+        if (moveCooldown <= 0.15f) return;
+        
         if (selectedPlanet != null) {
-            if (_keysHeld.Contains('I')) planetSelectedCoords.y--;
-            if (_keysHeld.Contains('J')) planetSelectedCoords.x--;
-            if (_keysHeld.Contains('K')) planetSelectedCoords.y++;
-            if (_keysHeld.Contains('L')) planetSelectedCoords.x++;
+            if (Input.GetKeyDown('I')) planetSelectedCoords.y--;
+            if (Input.GetKeyDown('J')) planetSelectedCoords.x--;
+            if (Input.GetKeyDown('K')) planetSelectedCoords.y++;
+            if (Input.GetKeyDown('L')) planetSelectedCoords.x++;
             planetSelectedCoords.x = Math.Max(0, Math.Min((int)selectedPlanet.Diameter - 1, planetSelectedCoords.x));
             planetSelectedCoords.y = Math.Max(0, Math.Min((int)selectedPlanet.Diameter - 1, planetSelectedCoords.y));
         } else if (selectedSystem != null) {
-            if (_keysHeld.Contains('J')) selectedPlanetInd--;
-            if (_keysHeld.Contains('L')) selectedPlanetInd++;
+            if (Input.GetKeyDown('J')) selectedPlanetInd--;
+            if (Input.GetKeyDown('L')) selectedPlanetInd++;
             int planetCount = selectedSystem.Planets.Count;
             selectedPlanetInd = 
                 selectedPlanetInd < 0 ? planetCount - 1 : 
                 planetCount > 0 ? selectedPlanetInd % planetCount : selectedPlanetInd;
         } else {
-            if (_keysHeld.Contains('I')) universeSelectedCoords.y -= SECTORSIZE;
-            if (_keysHeld.Contains('J')) universeSelectedCoords.x -= SECTORSIZE;
-            if (_keysHeld.Contains('K')) universeSelectedCoords.y += SECTORSIZE;
-            if (_keysHeld.Contains('L')) universeSelectedCoords.x += SECTORSIZE;
+            if (Input.GetKeyDown('I')) universeSelectedCoords.y -= SECTORSIZE;
+            if (Input.GetKeyDown('J')) universeSelectedCoords.x -= SECTORSIZE;
+            if (Input.GetKeyDown('K')) universeSelectedCoords.y += SECTORSIZE;
+            if (Input.GetKeyDown('L')) universeSelectedCoords.x += SECTORSIZE;
         }
 
         moveCooldown = 0f;
