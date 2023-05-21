@@ -17,24 +17,26 @@ internal sealed class Galaxy : Engine {
     private Planet? selectedPlanet = null;
     private int selectedPlanetInd = 0;
 
+    private const float UNIVERSE_NAV_SPEED = 30f;
+    private const float PLANET_NAV_SPEED = 12f;
     private (float x, float y) universeOffset = (0f, 0f);
-    private (int x, int y) planetOffset = (10, 5);
+    private (float x, float y) planetOffset = (10, 5);
     private (int x, int y) OffsetSelected => (universeSelectedCoords.x + (int)universeOffset.x * SECTORSIZE, universeSelectedCoords.y + (int)universeOffset.y * SECTORSIZE);
 
-    private const float UNIVERSE_NAV_SPEED = 30f;
     private float moveCooldown = 0f;
-
-    private readonly HashSet<char> _keysHeld = new HashSet<char>();
 
     private readonly Font _infoFont = new Font("Arial", 12);
 
     private readonly Bitmap _blankTile = (Bitmap)Image.FromFile("blankTile.png");
     private readonly Bitmap _selectorTile = (Bitmap)Image.FromFile("selectorTile.png");
-    private readonly Bitmap[] _coloredTiles = {
-        (Bitmap)Image.FromFile("grassTile1.png"),
-        (Bitmap)Image.FromFile("grassTile2.png"),
-        (Bitmap)Image.FromFile("dirtTile1.png"),
-        (Bitmap)Image.FromFile("stoneTile1.png"),
+    private readonly Bitmap[] _coloredTiles = {   // indexes
+        (Bitmap)Image.FromFile("grassTile1.png"), // 1
+        (Bitmap)Image.FromFile("grassTile2.png"), // 2
+        (Bitmap)Image.FromFile("grassTile3.png"), // 3
+        (Bitmap)Image.FromFile("grassTile4.png"), // 4
+        (Bitmap)Image.FromFile("grassTile5.png"), // 5
+        (Bitmap)Image.FromFile("dirtTile1.png"),  // 6
+        (Bitmap)Image.FromFile("stoneTile1.png"), // 7
     };
 
     private readonly (int w, int h) _tileSize = (40, 20);
@@ -186,6 +188,7 @@ internal sealed class Galaxy : Engine {
         selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
         selectedPlanet.InitializeWorld();
         planetSelectedCoords = (0, 0);
+        planetOffset = (8f, 9f);
     }
 
     private void RenderSelectedPlanet(in Graphics g) {
@@ -194,8 +197,8 @@ internal sealed class Galaxy : Engine {
         g.Clear(selectedPlanet.Col);
 
         (int, int) toScreen(int x, int y) =>
-            ((planetOffset.x * _tileSize.w) + (x - y) * (_tileSize.w / 2),
-             (planetOffset.y * _tileSize.h) + (x + y) * (_tileSize.h / 2));
+            (((int)planetOffset.x * _tileSize.w) + (x - y) * (_tileSize.w / 2),
+             ((int)planetOffset.y * _tileSize.h) + (x + y) * (_tileSize.h / 2));
 
         int worldSize = (int)selectedPlanet.Diameter;
 
@@ -208,8 +211,13 @@ internal sealed class Galaxy : Engine {
                 (int x, int y) sCoord = toScreen(x, y);
 
                 switch (selectedPlanet.World[y * worldSize + x]) {
-                    case 0: // invisible tile
+                    case 0:
                         g.DrawImageUnscaled(_blankTile, sCoord.x, sCoord.y);
+                        break;
+                    case 3:
+                    case 4:
+                    case 5:
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.World[y * worldSize + x] - 1], sCoord.x, sCoord.y - 20);
                         break;
                     default:
                         g.DrawImageUnscaled(_coloredTiles[selectedPlanet.World[y * worldSize + x] - 1], sCoord.x, sCoord.y);
@@ -220,7 +228,7 @@ internal sealed class Galaxy : Engine {
 
         g.DrawImageUnscaled(_selectorTile, selected.x, selected.y);
 
-        g.DrawString($"Selected: {selected}\nPlanet Selected: {planetSelectedCoords}",
+        g.DrawString($"Selected: {selected}\nPlanet Selected: {planetSelectedCoords}\nOffset: {planetOffset}",
             _infoFont, Brushes.Black, 0, 0);
     }
 
@@ -235,10 +243,17 @@ internal sealed class Galaxy : Engine {
             }
         }
 
-        if (Input.GetKeyDown('W')) universeOffset.y -= UNIVERSE_NAV_SPEED * deltaTime;
-        if (Input.GetKeyDown('A')) universeOffset.x -= UNIVERSE_NAV_SPEED * deltaTime;
-        if (Input.GetKeyDown('S')) universeOffset.y += UNIVERSE_NAV_SPEED * deltaTime;
-        if (Input.GetKeyDown('D')) universeOffset.x += UNIVERSE_NAV_SPEED * deltaTime;
+        if (selectedPlanet != null) {
+            if (Input.GetKeyDown('W')) planetOffset.y += PLANET_NAV_SPEED * deltaTime * 2;
+            if (Input.GetKeyDown('A')) planetOffset.x += PLANET_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('S')) planetOffset.y -= PLANET_NAV_SPEED * deltaTime * 2;
+            if (Input.GetKeyDown('D')) planetOffset.x -= PLANET_NAV_SPEED * deltaTime;
+        } else {
+            if (Input.GetKeyDown('W')) universeOffset.y -= UNIVERSE_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('A')) universeOffset.x -= UNIVERSE_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('S')) universeOffset.y += UNIVERSE_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('D')) universeOffset.x += UNIVERSE_NAV_SPEED * deltaTime;
+        }
 
         if (Input.GetKeyUp((char)27)) {
             if (selectedPlanet != null) {

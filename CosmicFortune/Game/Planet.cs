@@ -24,7 +24,14 @@ internal sealed class Planet {
         World = new int[(int)Diameter * (int)Diameter];
 
         for (int i = 0; i < World.Length; i++) {
-            World[i] = rand.Next(1, 5);
+            if (Foliage >= 0.7) {
+                World[i] = rand.Next(1, 7); // only foliage tiles
+            } else if (Minerals >= 0.7) {
+                rand.Next(1, 10); // still generate a random number
+                World[i] = 7; // stone tile
+            } else {
+                World[i] = rand.Next(1, 8);
+            }
         }
     }
 }

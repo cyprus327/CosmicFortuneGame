@@ -1,4 +1,5 @@
 ﻿using CosmicFortune.Common;
+using System.Collections.Generic;
 
 namespace CosmicFortune.Game;
 
@@ -17,18 +18,26 @@ internal sealed class SolarSystem {
 
         if (!generateFullSystem) return;
 
+        double normalize(double val, double min, double max) =>
+            Math.Clamp((val - min) / (max - min), 0, 1);
+
         double distFromStar = _rand.Next(40d, 180d);
         int planetCount = _rand.Next(0, 12);
         for (int i = 0; i < planetCount; i++) {
             // currently completely arbitrary numbers
-            double temp = Math.Max(-200d, StarDiameter * 20d - distFromStar * 1.5d) - _rand.Next(0d, 20d);
+            double temp = Math.Max(-190d, (StarDiameter * 20 - distFromStar * 1.5d) / 3) - _rand.Next(0d, 20d);
             double dist = distFromStar += _rand.Next(30d, 200d);
             double diam = _rand.Next(4d, 20d);
 
-            double water = temp >= -100 ? Math.Max(0, Math.Min(1, (temp + 100) / 100)) : 0;
-            double foliage = Math.Min(1.0, _rand.Next(0.6d, 1.5d) * water);
-            double minerals = temp >= 0 ? Math.Max(0, Math.Min(1, (_rand.Next(0d, 1d) * 0.5 + 0.3) + (temp < 50 ? 0 : 0.4))) : 0.15;
-            double gases = Math.Min(1.0, _rand.Next(0.5d, 1.2d) * minerals);
+            double water = 1 / (temp * Math.Sign(temp) == -1 ? -1.5 : 1) * 720 * _rand.Next(0.0, 1.0);
+            water = normalize(water, -200, 2000);
+
+            double foliage = temp < 50 ? _rand.Next(0.001, 0.1) : normalize(water * (0.8 + 0.4 * _rand.Next(0.0, 1.0)), -1, 2);
+
+            double minerals = _rand.Next(0.01, 0.99);
+            minerals = normalize(minerals, 0.01, 1);
+
+            double gases = _rand.Next(0.0, 1.0) * water;
 
             double pop = _rand.Next(0d, 100000000d);
             pop *= 1 + (temp / 100d);
