@@ -76,8 +76,9 @@ internal abstract class Engine {
         float delta = Time.DeltaTime;
         Update(mainGraphics, delta);
 
+        // if it's lagging like crazy show the fps
         int fps = (int)(1000f / delta / 1000f);
-        _canvas.Text = $"{_title}{(fps < 60 ? $" | FPS: {fps}" : string.Empty)} | {Time.ElapsedTime:F2}";
+        _canvas.Text = $"{_title}{(fps < 30 ? $" | FPS: {fps}" : string.Empty)}";
     }
 
     public abstract void Awake();

@@ -37,7 +37,7 @@ internal sealed class SolarSystem {
             pop *= 1 + gases;
             pop *= 1 + water;
             pop *= Math.Sign(pop);
-            pop *= Math.Sign(_rand.Next(-999, 2)); // 1/1000 chance life exists
+            pop *= Math.Sign(_rand.Next(-999, 2));
             pop = 0;//Math.Max(0, pop);
 
             bool hasRing = _rand.Next(0, 8) == 1;

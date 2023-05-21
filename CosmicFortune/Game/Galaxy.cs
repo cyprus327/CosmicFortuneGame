@@ -6,21 +6,27 @@ namespace CosmicFortune.Game;
 internal sealed class Galaxy : Engine {
     public Galaxy((int x, int y) windowSize, string windowTitle) : base(windowSize, windowTitle) { }
 
-    private (float x, float y) offset = (0f, 0f);
+    private const int SECTORSIZE = 16;
 
     private (int x, int y) selectedCoords = (0, 0);
     private SolarSystem? selectedSystem = null; 
     private int selectedPlanetInd = 0;
 
-    private const int _sectorW = 16, _sectorH = 16;
-    private const float _moveSpeed = 30f;
-    private float moveCooldown = 0f;
+    private Planet? selectedPlanet = null;
 
-    private (int x, int y) OffsetSelected => (selectedCoords.x + (int)offset.x * _sectorW, selectedCoords.y + (int)offset.y * _sectorH);
+    private (float x, float y) universeOffset = (0f, 0f);
+    private (int x, int y) OffsetSelected => (selectedCoords.x + (int)universeOffset.x * SECTORSIZE, selectedCoords.y + (int)universeOffset.y * SECTORSIZE);
+
+    private const float UNIVERSE_NAV_SPEED = 30f;
+    private float moveCooldown = 0f;
 
     private readonly HashSet<char> _keysHeld = new HashSet<char>();
 
     private readonly Font _infoFont = new Font("Arial", 12);
+
+    private readonly Bitmap _tiles = (Bitmap)Image.FromFile("isometricTiles.png");
+    private readonly (int w, int h) _tileSize = (40, 20);
+    private readonly (int x, int y) _origin = (5, 1);
 
     public override void Awake() {
         BackgroundColor = Color.Black;
@@ -33,51 +39,55 @@ internal sealed class Galaxy : Engine {
         selectedCoords.x = Math.Max(Math.Min(WindowSize.Width, selectedCoords.x), 0);
         selectedCoords.y = Math.Max(Math.Min(WindowSize.Height, selectedCoords.y), 0);
 
-        int xSectors = WindowSize.Width / _sectorW;
-        int ySectors = WindowSize.Height / _sectorH;
+        int xSectors = WindowSize.Width / SECTORSIZE;
+        int ySectors = WindowSize.Height / SECTORSIZE;
 
         (uint x, uint y) currentSector;
         for (currentSector.y = 0; currentSector.y < ySectors; currentSector.y++) {
             for (currentSector.x = 0; currentSector.x < xSectors; currentSector.x++) {
                 var system = new SolarSystem(
-                    currentSector.x + (uint)offset.x, 
-                    currentSector.y + (uint)offset.y);
+                    currentSector.x + (uint)universeOffset.x, 
+                    currentSector.y + (uint)universeOffset.y);
 
                 if (!system.StarExists) continue;
 
                 using var brush = new SolidBrush(system.StarCol);
 
-                int starW = (int)system.StarDiameter / (_sectorW / 2);
-                int starH = (int)system.StarDiameter / (_sectorH / 2);
+                int starW = (int)system.StarDiameter / (SECTORSIZE / 2);
+                int starH = (int)system.StarDiameter / (SECTORSIZE / 2);
 
                 g.FillEllipse(brush, 
-                    x: currentSector.x * _sectorW + (_sectorW / 2) - (starW / 2), 
-                    y: currentSector.y * _sectorH + (_sectorH / 2) - (starH / 2),
+                    x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - (starW / 2), 
+                    y: currentSector.y * SECTORSIZE + (SECTORSIZE / 2) - (starH / 2),
                     width: starW, 
                     height: starH);
 
-                if (!(selectedCoords.x / _sectorW == currentSector.x && selectedCoords.y / _sectorH == currentSector.y)) continue;
+                if (!(selectedCoords.x / SECTORSIZE == currentSector.x && selectedCoords.y / SECTORSIZE == currentSector.y)) continue;
 
                 g.DrawEllipse(Pens.Yellow,
-                    x: currentSector.x * _sectorW + (_sectorW / 2) - ((_sectorW - 4) / 2),
-                    y: currentSector.y * _sectorH + (_sectorH / 2) - ((_sectorH - 4) / 2),
-                    width: _sectorW - 4,
-                    height: _sectorH - 4);
+                    x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - ((SECTORSIZE - 4) / 2),
+                    y: currentSector.y * SECTORSIZE + (SECTORSIZE / 2) - ((SECTORSIZE - 4) / 2),
+                    width: SECTORSIZE - 4,
+                    height: SECTORSIZE - 4);
             }
         }
 
-        g.DrawRectangle(Pens.Red, selectedCoords.x, selectedCoords.y, _sectorW, _sectorH);
+        g.DrawRectangle(Pens.Red, selectedCoords.x, selectedCoords.y, SECTORSIZE, SECTORSIZE);
 
         g.DrawString($"{selectedSystem?.Planets.Count}", SystemFonts.DefaultFont, Brushes.White, 0f, 0f);
 
         if (_keysHeld.Contains(' ')) {
             UpdateSelectedSystem();
         }
+        if (_keysHeld.Contains((char)13)) {
+            UpdateSelectedPlanet();
+        }
         RenderSelectedSystem(g);
+        RenderSelectedPlanet(g);
     }
 
     private void UpdateSelectedSystem() {
-        uint x = (uint)(OffsetSelected.x / _sectorW), y = (uint)(OffsetSelected.y / _sectorH);
+        uint x = (uint)(OffsetSelected.x / SECTORSIZE), y = (uint)(OffsetSelected.y / SECTORSIZE);
         var system = new SolarSystem(x, y, false);
         
         selectedPlanetInd = 0;
@@ -163,6 +173,37 @@ internal sealed class Galaxy : Engine {
         }
     }
 
+    private void UpdateSelectedPlanet() {
+        if (selectedSystem == null) return;
+        
+        selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
+    }
+
+    private void RenderSelectedPlanet(in Graphics g) {
+        if (selectedPlanet == null) return;
+
+        g.Clear(Color.White);
+
+        (int, int) toScreen(int x, int y) =>
+            ((_origin.x * _tileSize.w) + (x - y) * (_tileSize.w / 2),
+             (_origin.y * _tileSize.h) + (x + y) * (_tileSize.h / 2));
+
+        (int x, int y) worldSize = ((int)selectedPlanet.Diameter, (int)selectedPlanet.Diameter);
+        int[] world = new int[worldSize.x * worldSize.y];
+
+        for (int y = 0; y < worldSize.y; y++) {
+            for (int x = 0; x < worldSize.x; x++) {
+                (int x, int y) sCoord = toScreen(x, y);
+
+                switch (world[y * worldSize.x + x]) {
+                    case 0: // invisible tile
+                        g.DrawImage(_tiles, sCoord.x, sCoord.y, new Rectangle(40, 0, 40, 20), GraphicsUnit.Pixel);
+                        break;
+                }
+            }
+        }
+    }
+
     private void UpdateKeysHeld() {
         _keysHeld.Clear();
 
@@ -182,15 +223,23 @@ internal sealed class Galaxy : Engine {
     }
 
     private void ApplyKeysHeld(in float deltaTime) {
-        if (_keysHeld.Contains('W')) offset.y -= _moveSpeed * deltaTime;
-        if (_keysHeld.Contains('A')) offset.x -= _moveSpeed * deltaTime;
-        if (_keysHeld.Contains('S')) offset.y += _moveSpeed * deltaTime;
-        if (_keysHeld.Contains('D')) offset.x += _moveSpeed * deltaTime;
+        if (_keysHeld.Contains('W')) universeOffset.y -= UNIVERSE_NAV_SPEED * deltaTime;
+        if (_keysHeld.Contains('A')) universeOffset.x -= UNIVERSE_NAV_SPEED * deltaTime;
+        if (_keysHeld.Contains('S')) universeOffset.y += UNIVERSE_NAV_SPEED * deltaTime;
+        if (_keysHeld.Contains('D')) universeOffset.x += UNIVERSE_NAV_SPEED * deltaTime;
 
-        if (_keysHeld.Contains((char)27) && selectedSystem != null) selectedSystem = null; 
         
         moveCooldown += deltaTime;
         if (moveCooldown <= 0.15f) return;
+        
+        if (_keysHeld.Contains((char)27)) {
+            if (selectedPlanet != null) {
+                selectedPlanet = null;
+            } else {
+                selectedSystem = null; 
+            }
+        }
+        
         // if a system is selected use ijkl (j and l) to navigate through planets
         if (selectedSystem != null) {
             if (_keysHeld.Contains('J')) selectedPlanetInd--;
@@ -200,11 +249,12 @@ internal sealed class Galaxy : Engine {
                 selectedPlanetInd < 0 ? planetCount - 1 : 
                 planetCount > 0 ? selectedPlanetInd % planetCount : selectedPlanetInd;
         } else {
-            if (_keysHeld.Contains('I')) selectedCoords.y -= _sectorH;
-            if (_keysHeld.Contains('J')) selectedCoords.x -= _sectorW;
-            if (_keysHeld.Contains('K')) selectedCoords.y += _sectorH;
-            if (_keysHeld.Contains('L')) selectedCoords.x += _sectorW;
+            if (_keysHeld.Contains('I')) selectedCoords.y -= SECTORSIZE;
+            if (_keysHeld.Contains('J')) selectedCoords.x -= SECTORSIZE;
+            if (_keysHeld.Contains('K')) selectedCoords.y += SECTORSIZE;
+            if (_keysHeld.Contains('L')) selectedCoords.x += SECTORSIZE;
         }
+
         moveCooldown = 0f;
     }
 }
