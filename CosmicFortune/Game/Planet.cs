@@ -1,4 +1,6 @@
-﻿namespace CosmicFortune.Game;
+﻿using CosmicFortune.Common;
+
+namespace CosmicFortune.Game;
 
 internal sealed class Planet {
     public double Dist = 0d;
@@ -11,6 +13,18 @@ internal sealed class Planet {
     public double Population = 0d;
     public bool HasRing = false;
     public List<double> Moons = new List<double>();
-
     public Color Col = Color.HotPink;
+
+    public (int x, int y) Coords;
+    public int[]? World = null;
+
+    public void InitializeWorld() {
+        var rand = new LehmerRand((uint)((Coords.x & 0xFFFF) << 32 | (Coords.y & 0xFFFF)));
+
+        World = new int[(int)Diameter * (int)Diameter];
+
+        for (int i = 0; i < World.Length; i++) {
+            World[i] = rand.Next(1, 5);
+        }
+    }
 }

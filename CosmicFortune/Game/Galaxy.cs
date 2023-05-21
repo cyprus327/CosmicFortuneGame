@@ -1,5 +1,7 @@
 ﻿using CosmicFortune.Common;
 using CosmicFortune.Rendering;
+using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 
 namespace CosmicFortune.Game;
 
@@ -8,14 +10,16 @@ internal sealed class Galaxy : Engine {
 
     private const int SECTORSIZE = 16;
 
-    private (int x, int y) selectedCoords = (0, 0);
+    private (int x, int y) universeSelectedCoords = (0, 0);
+    private (int x, int y) planetSelectedCoords = (0, 0);
+
     private SolarSystem? selectedSystem = null; 
+    private Planet? selectedPlanet = null;
     private int selectedPlanetInd = 0;
 
-    private Planet? selectedPlanet = null;
-
     private (float x, float y) universeOffset = (0f, 0f);
-    private (int x, int y) OffsetSelected => (selectedCoords.x + (int)universeOffset.x * SECTORSIZE, selectedCoords.y + (int)universeOffset.y * SECTORSIZE);
+    private (int x, int y) planetOffset = (10, 5);
+    private (int x, int y) OffsetSelected => (universeSelectedCoords.x + (int)universeOffset.x * SECTORSIZE, universeSelectedCoords.y + (int)universeOffset.y * SECTORSIZE);
 
     private const float UNIVERSE_NAV_SPEED = 30f;
     private float moveCooldown = 0f;
@@ -24,9 +28,16 @@ internal sealed class Galaxy : Engine {
 
     private readonly Font _infoFont = new Font("Arial", 12);
 
-    private readonly Bitmap _tiles = (Bitmap)Image.FromFile("isometricTiles.png");
+    private readonly Bitmap _blankTile = (Bitmap)Image.FromFile("blankTile.png");
+    private readonly Bitmap _selectorTile = (Bitmap)Image.FromFile("selectorTile.png");
+    private readonly Bitmap[] _coloredTiles = {
+        (Bitmap)Image.FromFile("grassTile1.png"),
+        (Bitmap)Image.FromFile("grassTile2.png"),
+        (Bitmap)Image.FromFile("dirtTile1.png"),
+        (Bitmap)Image.FromFile("stoneTile1.png"),
+    };
+
     private readonly (int w, int h) _tileSize = (40, 20);
-    private readonly (int x, int y) _origin = (5, 1);
 
     public override void Awake() {
         BackgroundColor = Color.Black;
@@ -36,8 +47,8 @@ internal sealed class Galaxy : Engine {
         UpdateKeysHeld();
         ApplyKeysHeld(deltaTime);
 
-        selectedCoords.x = Math.Max(Math.Min(WindowSize.Width, selectedCoords.x), 0);
-        selectedCoords.y = Math.Max(Math.Min(WindowSize.Height, selectedCoords.y), 0);
+        universeSelectedCoords.x = Math.Max(Math.Min(WindowSize.Width, universeSelectedCoords.x), 0);
+        universeSelectedCoords.y = Math.Max(Math.Min(WindowSize.Height, universeSelectedCoords.y), 0);
 
         int xSectors = WindowSize.Width / SECTORSIZE;
         int ySectors = WindowSize.Height / SECTORSIZE;
@@ -62,7 +73,7 @@ internal sealed class Galaxy : Engine {
                     width: starW, 
                     height: starH);
 
-                if (!(selectedCoords.x / SECTORSIZE == currentSector.x && selectedCoords.y / SECTORSIZE == currentSector.y)) continue;
+                if (!(universeSelectedCoords.x / SECTORSIZE == currentSector.x && universeSelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
 
                 g.DrawEllipse(Pens.Yellow,
                     x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - ((SECTORSIZE - 4) / 2),
@@ -72,7 +83,7 @@ internal sealed class Galaxy : Engine {
             }
         }
 
-        g.DrawRectangle(Pens.Red, selectedCoords.x, selectedCoords.y, SECTORSIZE, SECTORSIZE);
+        g.DrawRectangle(Pens.Red, universeSelectedCoords.x, universeSelectedCoords.y, SECTORSIZE, SECTORSIZE);
 
         g.DrawString($"{selectedSystem?.Planets.Count}", SystemFonts.DefaultFont, Brushes.White, 0f, 0f);
 
@@ -177,31 +188,48 @@ internal sealed class Galaxy : Engine {
         if (selectedSystem == null) return;
         
         selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
+        selectedPlanet.InitializeWorld();
+        planetSelectedCoords = (0, 0);
     }
 
     private void RenderSelectedPlanet(in Graphics g) {
-        if (selectedPlanet == null) return;
+        if (selectedPlanet == null || selectedPlanet.World == null) return;
 
-        g.Clear(Color.White);
+        g.Clear(selectedPlanet.Col);
 
         (int, int) toScreen(int x, int y) =>
-            ((_origin.x * _tileSize.w) + (x - y) * (_tileSize.w / 2),
-             (_origin.y * _tileSize.h) + (x + y) * (_tileSize.h / 2));
+            ((planetOffset.x * _tileSize.w) + (x - y) * (_tileSize.w / 2),
+             (planetOffset.y * _tileSize.h) + (x + y) * (_tileSize.h / 2));
 
-        (int x, int y) worldSize = ((int)selectedPlanet.Diameter, (int)selectedPlanet.Diameter);
-        int[] world = new int[worldSize.x * worldSize.y];
+        int worldSize = (int)selectedPlanet.Diameter;
 
-        for (int y = 0; y < worldSize.y; y++) {
-            for (int x = 0; x < worldSize.x; x++) {
+        (int x, int y) selected = toScreen(planetSelectedCoords.x, planetSelectedCoords.y);
+        if (_keysHeld.Contains(' ')) {
+            selectedPlanet.World[planetSelectedCoords.y * worldSize + planetSelectedCoords.x]++;
+        }
+
+        for (int y = 0; y < worldSize; y++) {
+            for (int x = 0; x < worldSize; x++) {
+                selectedPlanet.World[y * worldSize + x] %= _coloredTiles.Length + 1;
+                //if (selectedPlanet.World[y * worldSize + x] == 0) selectedPlanet.World[y * worldSize + x] = 1;
+
                 (int x, int y) sCoord = toScreen(x, y);
 
-                switch (world[y * worldSize.x + x]) {
+                switch (selectedPlanet.World[y * worldSize + x]) {
                     case 0: // invisible tile
-                        g.DrawImage(_tiles, sCoord.x, sCoord.y, new Rectangle(40, 0, 40, 20), GraphicsUnit.Pixel);
+                        g.DrawImageUnscaled(_blankTile, sCoord.x, sCoord.y);
+                        break;
+                    default:
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.World[y * worldSize + x] - 1], sCoord.x, sCoord.y);
                         break;
                 }
             }
         }
+
+        g.DrawImageUnscaled(_selectorTile, selected.x, selected.y);
+
+        g.DrawString($"Selected: {selected}\nPlanet Selected: {planetSelectedCoords}",
+            _infoFont, Brushes.Black, 0, 0);
     }
 
     private void UpdateKeysHeld() {
@@ -240,8 +268,14 @@ internal sealed class Galaxy : Engine {
             }
         }
         
-        // if a system is selected use ijkl (j and l) to navigate through planets
-        if (selectedSystem != null) {
+        if (selectedPlanet != null) {
+            if (_keysHeld.Contains('I')) planetSelectedCoords.y--;
+            if (_keysHeld.Contains('J')) planetSelectedCoords.x--;
+            if (_keysHeld.Contains('K')) planetSelectedCoords.y++;
+            if (_keysHeld.Contains('L')) planetSelectedCoords.x++;
+            planetSelectedCoords.x = Math.Max(0, Math.Min((int)selectedPlanet.Diameter - 1, planetSelectedCoords.x));
+            planetSelectedCoords.y = Math.Max(0, Math.Min((int)selectedPlanet.Diameter - 1, planetSelectedCoords.y));
+        } else if (selectedSystem != null) {
             if (_keysHeld.Contains('J')) selectedPlanetInd--;
             if (_keysHeld.Contains('L')) selectedPlanetInd++;
             int planetCount = selectedSystem.Planets.Count;
@@ -249,10 +283,10 @@ internal sealed class Galaxy : Engine {
                 selectedPlanetInd < 0 ? planetCount - 1 : 
                 planetCount > 0 ? selectedPlanetInd % planetCount : selectedPlanetInd;
         } else {
-            if (_keysHeld.Contains('I')) selectedCoords.y -= SECTORSIZE;
-            if (_keysHeld.Contains('J')) selectedCoords.x -= SECTORSIZE;
-            if (_keysHeld.Contains('K')) selectedCoords.y += SECTORSIZE;
-            if (_keysHeld.Contains('L')) selectedCoords.x += SECTORSIZE;
+            if (_keysHeld.Contains('I')) universeSelectedCoords.y -= SECTORSIZE;
+            if (_keysHeld.Contains('J')) universeSelectedCoords.x -= SECTORSIZE;
+            if (_keysHeld.Contains('K')) universeSelectedCoords.y += SECTORSIZE;
+            if (_keysHeld.Contains('L')) universeSelectedCoords.x += SECTORSIZE;
         }
 
         moveCooldown = 0f;

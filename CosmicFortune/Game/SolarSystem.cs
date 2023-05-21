@@ -57,7 +57,8 @@ internal sealed class SolarSystem {
                 Gases = gases,
                 Population = pop,
                 HasRing = hasRing,
-                Col = col
+                Col = col,
+                Coords = ((int)(Coords.x + dist), (int)(Coords.y + dist))
             };
             
             int moonCount = Math.Max(_rand.Next(-5, 5), 0);
