@@ -22,7 +22,7 @@ Contributions are welcome, if you have any ideas, bug reports, or want to add ne
 
 ## License
 
-This project is licensed under the [GNU General Public License 2.0](LICENSE.txt). You are free to run, study, modify, and distribute the software. If you distribute GPL-licensed software or a derivative work, you must provide the corresponding source code and ensure that the same license is applied to the distributed work.
+This project is licensed under the [GNU General Public License 3.0](LICENSE.txt). You are free to run, study, modify, and distribute the software. If you distribute GPL-licensed software or a derivative work, you must provide the corresponding source code and ensure that the same license is applied to the distributed work.
 
 ## Acknowledgements
 
