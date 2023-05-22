@@ -27,16 +27,16 @@ internal sealed class Galaxy : Engine {
 
     private readonly Font _infoFont = new Font("Arial", 12);
 
-    private readonly Bitmap _blankTile = (Bitmap)Image.FromFile("blankTile.png");
-    private readonly Bitmap _selectorTile = (Bitmap)Image.FromFile("selectorTile.png");
-    private readonly Bitmap[] _coloredTiles = {   // indexes
-        (Bitmap)Image.FromFile("grassTile1.png"), // 1
-        (Bitmap)Image.FromFile("grassTile2.png"), // 2
-        (Bitmap)Image.FromFile("grassTile3.png"), // 3
-        (Bitmap)Image.FromFile("grassTile4.png"), // 4
-        (Bitmap)Image.FromFile("grassTile5.png"), // 5
-        (Bitmap)Image.FromFile("dirtTile1.png"),  // 6
-        (Bitmap)Image.FromFile("stoneTile1.png"), // 7
+    private readonly Bitmap _blankTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}blankTile.png");
+    private readonly Bitmap _selectorTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}selectorTile.png");
+    private readonly Bitmap[] _coloredTiles = {                                      // access indexes
+        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile1.png"), // 1
+        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile2.png"), // 2
+        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile3.png"), // 3
+        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile4.png"), // 4
+        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile5.png"), // 5
+        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}dirtTile1.png"),  // 6
+        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}stoneTile1.png"), // 7
     };
 
     private readonly (int w, int h) _tileSize = (40, 20);
@@ -187,12 +187,13 @@ internal sealed class Galaxy : Engine {
         
         selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
         selectedPlanet.InitializeWorld();
+        selectedPlanet.LoadModifications();
         planetSelectedCoords = (0, 0);
         planetOffset = (8f, 9f);
     }
 
     private void RenderSelectedPlanet(in Graphics g) {
-        if (selectedPlanet == null || selectedPlanet.World == null) return;
+        if (selectedPlanet == null) return;
 
         g.Clear(selectedPlanet.Col);
 
@@ -206,36 +207,33 @@ internal sealed class Galaxy : Engine {
 
         for (int y = 0; y < worldSize; y++) {
             for (int x = 0; x < worldSize; x++) {
-                selectedPlanet.World[y * worldSize + x] %= _coloredTiles.Length + 1;
+                selectedPlanet.ModEq(y * worldSize + x, _coloredTiles.Length + 1);
 
                 (int x, int y) sCoord = toScreen(x, y);
 
-                switch (selectedPlanet.World[y * worldSize + x]) {
+                switch (selectedPlanet.ValAt(y * worldSize + x)) {
                     case 0:
                         g.DrawImageUnscaled(_blankTile, sCoord.x, sCoord.y);
                         break;
                     case 3:
                     case 4:
                     case 5:
-                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.World[y * worldSize + x] - 1], sCoord.x, sCoord.y - 20);
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.ValAt(y * worldSize + x) - 1], sCoord.x, sCoord.y - 20);
                         break;
                     default:
-                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.World[y * worldSize + x] - 1], sCoord.x, sCoord.y);
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.ValAt(y * worldSize + x) - 1], sCoord.x, sCoord.y);
                         break;
                 }
             }
         }
 
         g.DrawImageUnscaled(_selectorTile, selected.x, selected.y);
-
-        g.DrawString($"Selected: {selected}\nPlanet Selected: {planetSelectedCoords}\nOffset: {planetOffset}",
-            _infoFont, Brushes.Black, 0, 0);
     }
 
     private void HandleInput(in float deltaTime) {
         if (Input.GetKeyUp(' ')) {
-            if (selectedPlanet != null && selectedPlanet.World != null) {
-                selectedPlanet.World[planetSelectedCoords.y * (int)selectedPlanet.Diameter + planetSelectedCoords.x]++;
+            if (selectedPlanet != null) {
+                selectedPlanet.PlusPlus(planetSelectedCoords.y * (int)selectedPlanet.Diameter + planetSelectedCoords.x);
             } else if (selectedSystem != null) {
                 UpdateSelectedPlanet();
             } else {
@@ -257,6 +255,7 @@ internal sealed class Galaxy : Engine {
 
         if (Input.GetKeyUp((char)27)) {
             if (selectedPlanet != null) {
+                selectedPlanet.SaveModifications();
                 selectedPlanet = null;
             } else {
                 selectedSystem = null; 
