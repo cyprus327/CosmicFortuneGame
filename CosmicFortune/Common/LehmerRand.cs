@@ -2,19 +2,25 @@
 
 internal sealed class LehmerRand {
     public LehmerRand(uint seed) {
-        State = seed;
+        state = seed;
     }
 
-    public uint State { get; private set; } = 0;
-
-    public void Seed(uint seed) {
-        State = seed;
+    public static uint Seed { 
+        get {
+            return seed;
+        }
+        set {
+            seed = value == 0 ? 1 : value;
+        }
     }
+    private static uint seed = 1;
+
+    private uint state = 0;
 
     public uint Next() {
-        State += 0xE120FC15;
+        state += 0xE120FC15 * seed;
         ulong temp;
-        temp = (ulong)State * 0x4A39B70D;
+        temp = (ulong)state * 0x4A39B70D;
         uint m1 = (uint)((temp >> 32) ^ temp);
         temp = (ulong)m1 * 0x12FAD5C9;
         uint m2 = (uint)((temp >> 32) ^ temp);
