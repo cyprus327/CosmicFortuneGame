@@ -26,6 +26,7 @@ internal sealed class Galaxy : Engine {
     private float moveCooldown = 0f;
 
     private readonly Font _infoFont = new Font("Arial", 12);
+    private readonly Brush _whiteBrush = Brushes.White;
 
     private readonly Bitmap _blankTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}blankTile.png");
     private readonly Bitmap _selectorTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}selectorTile.png");
@@ -207,33 +208,35 @@ internal sealed class Galaxy : Engine {
 
         for (int y = 0; y < worldSize; y++) {
             for (int x = 0; x < worldSize; x++) {
-                selectedPlanet.ModEq(y * worldSize + x, _coloredTiles.Length + 1);
-
                 (int x, int y) sCoord = toScreen(x, y);
 
-                switch (selectedPlanet.ValAt(y * worldSize + x)) {
+                switch (selectedPlanet[y * worldSize + x].TileInd) {
                     case 0:
                         g.DrawImageUnscaled(_blankTile, sCoord.x, sCoord.y);
                         break;
                     case 3:
                     case 4:
                     case 5:
-                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.ValAt(y * worldSize + x) - 1], sCoord.x, sCoord.y - 20);
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet[y * worldSize + x].TileInd - 1], sCoord.x, sCoord.y - 20);
                         break;
                     default:
-                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet.ValAt(y * worldSize + x) - 1], sCoord.x, sCoord.y);
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet[y * worldSize + x].TileInd - 1], sCoord.x, sCoord.y);
                         break;
                 }
             }
         }
 
         g.DrawImageUnscaled(_selectorTile, selected.x, selected.y);
+
+        int i = planetSelectedCoords.y * worldSize + planetSelectedCoords.x;
+        string planetInfo = $" Water: {selectedPlanet[i].Water}\n Foliage: {selectedPlanet[i].Foliage}\n Minerals: {selectedPlanet[i].Minerals}\n Gases: {selectedPlanet[i].Gases}";
+        g.DrawString($"Planet Info:\n{planetInfo}", _infoFont, _whiteBrush, 0, 0);
     }
 
     private void HandleInput(in float deltaTime) {
         if (Input.GetKeyUp(' ')) {
             if (selectedPlanet != null) {
-                selectedPlanet.PlusPlus(planetSelectedCoords.y * (int)selectedPlanet.Diameter + planetSelectedCoords.x);
+                selectedPlanet.Harvest(planetSelectedCoords.y * (int)selectedPlanet.Diameter + planetSelectedCoords.x);
             } else if (selectedSystem != null) {
                 UpdateSelectedPlanet();
             } else {
