@@ -5,15 +5,11 @@ internal sealed class LehmerRand {
         state = seed;
     }
 
-    public static uint Seed { 
-        get {
-            return seed;
-        }
-        set {
-            seed = value == 0 ? 1 : value;
-        }
-    }
     private static uint seed = 1;
+    public static uint Seed { 
+        get => seed;
+        set => seed = value == 0 ? 1 : value;
+    }
 
     private uint state = 0;
 

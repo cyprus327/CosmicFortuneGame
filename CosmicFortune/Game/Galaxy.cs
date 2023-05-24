@@ -1,7 +1,5 @@
 ﻿using CosmicFortune.Common;
 using CosmicFortune.Rendering;
-using System.Collections.Immutable;
-using System.Runtime.InteropServices;
 
 namespace CosmicFortune.Game;
 
@@ -28,6 +26,7 @@ internal sealed class Galaxy : Engine {
     private readonly Font _infoFont = new Font("Arial", 12);
     private readonly Brush _whiteBrush = Brushes.White;
 
+    private readonly (int w, int h) _tileSize = (40, 20);
     private readonly Bitmap _blankTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}blankTile.png");
     private readonly Bitmap _selectorTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}selectorTile.png");
     private readonly Bitmap[] _coloredTiles = {                                      // access indexes
@@ -40,24 +39,70 @@ internal sealed class Galaxy : Engine {
         (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}stoneTile1.png"), // 7
     };
 
-    private readonly (int w, int h) _tileSize = (40, 20);
+    private readonly string _resourcesFile = $"SaveData{Path.DirectorySeparatorChar}resources.txt";
+    private (double w, double f, double m, double g) totalResources;
+
+    private bool uiEnabled = true;
+
+    ~Galaxy() {        
+        _infoFont.Dispose();
+        _whiteBrush.Dispose();
+        _blankTile.Dispose();
+        _selectorTile.Dispose();
+        foreach (var tile in _coloredTiles) {
+            tile.Dispose();
+        }
+    }
 
     public override void Awake() {
         BackgroundColor = Color.Black;
+
+        (double, double, double, double) parseResources() {
+            string[] data = File.ReadAllText(_resourcesFile).Trim('(', ')').Split(", ");
+            return (double.Parse(data[0]), double.Parse(data[1]), double.Parse(data[2]), double.Parse(data[3]));
+        }
+
+        totalResources = File.Exists(_resourcesFile) ? parseResources() : (0d, 0d, 0d, 0d);
     }
 
     public override void Update(in Graphics g, in float deltaTime) {
         HandleInput(deltaTime);
 
-        universeSelectedCoords.x = Math.Max(Math.Min(WindowSize.Width, universeSelectedCoords.x), 0);
-        universeSelectedCoords.y = Math.Max(Math.Min(WindowSize.Height, universeSelectedCoords.y), 0);
+        universeSelectedCoords.x = Math.Clamp(universeSelectedCoords.x, 0, WindowSize.Width - SECTORSIZE * 3);
+        universeSelectedCoords.y = Math.Clamp(universeSelectedCoords.y, 0, WindowSize.Height - SECTORSIZE * 3);
 
-        RenderGalaxy(g);
-        RenderSelectedSystem(g);
-        RenderSelectedPlanet(g);
+        if (selectedPlanet != null) {
+            RenderSelectedPlanet(g);
+        } else if (selectedSystem != null) {
+            RenderSelectedSystem(g);
+        } else {
+            RenderGalaxy(g);
+        }
+
+        RenderStats(g);
+
+        if ((int)Time.ElapsedTime % 10 == 0) {
+            File.WriteAllText(_resourcesFile, totalResources.ToString());
+        }
     }
 
-    private void RenderGalaxy(Graphics g) {
+    private void RenderStats(in Graphics g) {
+        if (!uiEnabled) return;
+
+        int x = WindowSize.Width - 200;
+        using var bgBrush = new SolidBrush(Color.FromArgb(180, Color.Black));
+        g.FillRectangle(bgBrush, x, 10, 175, 500);
+        g.DrawRectangle(Pens.White, x, 10, 175, 500);
+
+        g.DrawString($"Resources:\n" +
+            $" Water: {totalResources.w:F4}\n" +
+            $" Foliage: {totalResources.f:F4}\n" +
+            $" Minerals: {totalResources.m:F4}\n" +
+            $" Gases: {totalResources.g:F4}",
+            _infoFont, _whiteBrush, x + 8, 20);
+    }
+
+    private void RenderGalaxy(in Graphics g) {
         if (selectedPlanet != null) return;
 
         int xSectors = WindowSize.Width / SECTORSIZE;
@@ -84,6 +129,7 @@ internal sealed class Galaxy : Engine {
                     height: starH);
 
                 if (!(universeSelectedCoords.x / SECTORSIZE == currentSector.x && universeSelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
+                if (!uiEnabled) continue;
 
                 g.DrawEllipse(Pens.Yellow,
                     x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - ((SECTORSIZE - 4) / 2),
@@ -93,53 +139,43 @@ internal sealed class Galaxy : Engine {
             }
         }
 
+        if (!uiEnabled) return;
+
         g.DrawRectangle(Pens.Red, universeSelectedCoords.x, universeSelectedCoords.y, SECTORSIZE, SECTORSIZE);
-    }
-
-    private void UpdateSelectedSystem() {
-        uint x = (uint)(OffsetSelected.x / SECTORSIZE), y = (uint)(OffsetSelected.y / SECTORSIZE);
-        var system = new SolarSystem(x, y, false);
-        
-        selectedPlanetInd = 0;
-
-        if (!system.StarExists) {
-            selectedSystem = null;
-            return;
-        }
-
-        selectedSystem = new SolarSystem(x, y, true);
     }
 
     private void RenderSelectedSystem(in Graphics g) {
         if (selectedSystem == null) return;
 
-        var bgCol = Color.FromArgb(180, Color.Black);
-        using var bgBrush = new SolidBrush(bgCol);
-        g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
-
-        string systemInfoStr =
-            $"System Info:\n" +
-            $" Star Size: {selectedSystem.StarDiameter:F2}\n" +
-            $" Star Color: {selectedSystem.StarCol.Name}\n" +
-            $" Planets: {selectedSystem.Planets.Count}";
-        g.DrawString(systemInfoStr, _infoFont, Brushes.White, 10, 10);
-
         int planetCount = selectedSystem.Planets.Count;
-        if (planetCount > 0) {
-            Planet selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
-            string planetInfoStr =
-                $"Selected Planet Info:\n" +
-                $" Distance From Sun: {selectedPlanet.Dist:F4}\n" +
-                $" Diameter: {selectedPlanet.Diameter:F4}\n" +
-                $" Ambient Temperature (F): {selectedPlanet.Temp:F4}\n" +
-                $" Water: {selectedPlanet.Water:F2}\n" +
-                $" Foliage: {selectedPlanet.Foliage:F2}\n" +
-                $" Minerals: {selectedPlanet.Minerals:F2}\n" +
-                $" Gases: {selectedPlanet.Gases:F2}\n" +
-                $" Population: {selectedPlanet.Population}\n" +
-                $" Has a ring: {selectedPlanet.HasRing}\n" +
-                $" Moons: {selectedPlanet.Moons.Count}";
-            g.DrawString(planetInfoStr, _infoFont, Brushes.White, 260, 10);
+        if (uiEnabled) {
+            var bgCol = Color.FromArgb(180, Color.Black);
+            using var bgBrush = new SolidBrush(bgCol);
+            g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
+
+            string systemInfoStr =
+                $"System Info:\n" +
+                $" Star Size: {selectedSystem.StarDiameter:F2}\n" +
+                $" Star Color: {selectedSystem.StarCol.Name}\n" +
+                $" Planets: {selectedSystem.Planets.Count}";
+            g.DrawString(systemInfoStr, _infoFont, _whiteBrush, 10, 10);
+
+            if (planetCount > 0) {
+                Planet selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
+                string planetInfoStr =
+                    $"Selected Planet Info:\n" +
+                    $" Distance From Sun: {selectedPlanet.Dist:F4}\n" +
+                    $" Diameter: {selectedPlanet.Diameter:F4}\n" +
+                    $" Ambient Temperature (F): {selectedPlanet.Temp:F4}\n" +
+                    $" Water: {selectedPlanet.Water:F2}\n" +
+                    $" Foliage: {selectedPlanet.Foliage:F2}\n" +
+                    $" Minerals: {selectedPlanet.Minerals:F2}\n" +
+                    $" Gases: {selectedPlanet.Gases:F2}\n" +
+                    $" Population: {selectedPlanet.Population}\n" +
+                    $" Has a ring: {selectedPlanet.HasRing}\n" +
+                    $" Moons: {selectedPlanet.Moons.Count}";
+                g.DrawString(planetInfoStr, _infoFont, _whiteBrush, 260, 10);
+            }
         }
 
         using var starBrush = new SolidBrush(selectedSystem.StarCol);
@@ -182,17 +218,7 @@ internal sealed class Galaxy : Engine {
             body.x += di;
         }
     }
-
-    private void UpdateSelectedPlanet() {
-        if (selectedSystem == null) return;
-        
-        selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
-        selectedPlanet.InitializeWorld();
-        selectedPlanet.LoadModifications();
-        planetSelectedCoords = (0, 0);
-        planetOffset = (8f, 9f);
-    }
-
+    
     private void RenderSelectedPlanet(in Graphics g) {
         if (selectedPlanet == null) return;
 
@@ -210,39 +236,83 @@ internal sealed class Galaxy : Engine {
             for (int x = 0; x < worldSize; x++) {
                 (int x, int y) sCoord = toScreen(x, y);
 
-                switch (selectedPlanet[y * worldSize + x].TileInd) {
+                int ind = y * worldSize + x;
+                switch (selectedPlanet[ind].TileInd) {
                     case 0:
                         g.DrawImageUnscaled(_blankTile, sCoord.x, sCoord.y);
                         break;
                     case 3:
                     case 4:
                     case 5:
-                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet[y * worldSize + x].TileInd - 1], sCoord.x, sCoord.y - 20);
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet[ind].TileInd - 1], sCoord.x, sCoord.y - 20);
                         break;
                     default:
-                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet[y * worldSize + x].TileInd - 1], sCoord.x, sCoord.y);
+                        g.DrawImageUnscaled(_coloredTiles[selectedPlanet[ind].TileInd - 1], sCoord.x, sCoord.y);
                         break;
                 }
             }
         }
 
+        if (!uiEnabled) return;
+
         g.DrawImageUnscaled(_selectorTile, selected.x, selected.y);
 
-        int i = planetSelectedCoords.y * worldSize + planetSelectedCoords.x;
-        string planetInfo = $" Water: {selectedPlanet[i].Water}\n Foliage: {selectedPlanet[i].Foliage}\n Minerals: {selectedPlanet[i].Minerals}\n Gases: {selectedPlanet[i].Gases}";
-        g.DrawString($"Planet Info:\n{planetInfo}", _infoFont, _whiteBrush, 0, 0);
+        PlanetChunk ch = selectedPlanet[planetSelectedCoords.y * worldSize + planetSelectedCoords.x];
+
+        double max = 4d;
+        double total = Math.Clamp(ch.Water + ch.Foliage + ch.Minerals + ch.Gases, 0d, max);
+        g.FillRectangle(Brushes.Red, 10, 10, (int)(max * 40d), (int)max * 4);
+        g.FillRectangle(Brushes.Green, 10, 10, (int)(total * 40d), (int)max * 4);
+
+        string planetInfo = $"Planet Info:\n" +
+            $" Water: {ch.Water :F4}\n" +
+            $" Foliage: {ch.Foliage :F4}\n" +
+            $" Minerals: {ch.Minerals:F4}\n" +
+            $" Gases: {ch.Gases:F4}";
+        g.DrawString($"Planet Info:\n{planetInfo}", _infoFont, _whiteBrush, 10, (int)max * 4 + 20);
+    }
+
+    private void UpdateSelectedSystem() {
+        uint x = (uint)(OffsetSelected.x / SECTORSIZE), y = (uint)(OffsetSelected.y / SECTORSIZE);
+        var system = new SolarSystem(x, y, false);
+        
+        selectedPlanetInd = 0;
+
+        if (!system.StarExists) {
+            selectedSystem = null;
+            return;
+        }
+
+        selectedSystem = new SolarSystem(x, y, true);
+    }
+
+    private void UpdateSelectedPlanet() {
+        if (selectedSystem == null) return;
+        if (selectedSystem.Planets.Count == 0) return;
+
+        selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
+        selectedPlanet.InitializeWorld();
+        selectedPlanet.LoadModifications();
+        planetSelectedCoords = (0, 0);
+        planetOffset = (8f, 9f);
     }
 
     private void HandleInput(in float deltaTime) {
         if (Input.GetKeyUp(' ')) {
             if (selectedPlanet != null) {
-                selectedPlanet.Harvest(planetSelectedCoords.y * (int)selectedPlanet.Diameter + planetSelectedCoords.x);
+                var (w, f, m, g) = selectedPlanet.Harvest(planetSelectedCoords.y * (int)selectedPlanet.Diameter + planetSelectedCoords.x);
+                totalResources.w += w;
+                totalResources.f += f;
+                totalResources.m += m;
+                totalResources.g += g;
             } else if (selectedSystem != null) {
                 UpdateSelectedPlanet();
             } else {
                 UpdateSelectedSystem();
             }
         }
+
+        if (Input.GetKeyUp((char)9)) uiEnabled = !uiEnabled;
 
         if (selectedPlanet != null) {
             if (Input.GetKeyDown('W')) planetOffset.y += PLANET_NAV_SPEED * deltaTime * 2;

@@ -71,11 +71,11 @@ internal sealed class Planet {
         _world[index].Gases -= g;
 
         if (_world[index].TileInd > 0 && _world[index].TileInd < 7) {
-            if (_world[index].Water < 0.4 || _world[index].Foliage < 0.4) {
+            if (_world[index].Water < 0.25 && _world[index].Foliage < 0.25) {
                 _world[index].TileInd = 6;
             }
         } else if (_world[index].TileInd == 6) {
-            if (_world[index].Minerals < 0.4 || _world[index].Gases < 0.4) {
+            if (_world[index].Minerals < 0.25 && _world[index].Gases < 0.25) {
                 _world[index].TileInd = 7;
             }
         }
