@@ -1,10 +1,10 @@
 ﻿using CosmicFortune.Common;
 using System.Collections.Generic;
 
-namespace CosmicFortune.Game;
+namespace CosmicFortune.Game.Objects;
 
-internal sealed class SolarSystem {
-    public SolarSystem(uint x, uint y, bool generateFullSystem = false) {
+internal sealed class StarSystem : GalacticBody {
+    public StarSystem(uint x, uint y, bool generateFullSystem = false) {
         Coords = (x, y);
 
         _rand = new LehmerRand((x & 0xFFFF) << 16 | (y & 0xFFFF));

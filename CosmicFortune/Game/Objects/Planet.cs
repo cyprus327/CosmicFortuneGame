@@ -1,6 +1,6 @@
 ﻿using CosmicFortune.Common;
 
-namespace CosmicFortune.Game;
+namespace CosmicFortune.Game.Objects;
 
 internal sealed class Planet {
     public double Dist = 0d;

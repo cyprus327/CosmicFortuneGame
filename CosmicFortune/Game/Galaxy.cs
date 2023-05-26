@@ -1,5 +1,6 @@
 ﻿using CosmicFortune.Common;
 using CosmicFortune.Rendering;
+using CosmicFortune.Game.Objects;
 
 namespace CosmicFortune.Game;
 
@@ -11,7 +12,7 @@ internal sealed class Galaxy : Engine {
     private (int x, int y) universeSelectedCoords = (0, 0);
     private (int x, int y) planetSelectedCoords = (0, 0);
 
-    private SolarSystem? selectedSystem = null; 
+    private GalacticBody? selectedBody = null; 
     private Planet? selectedPlanet = null;
     private int selectedPlanetInd = 0;
 
@@ -73,7 +74,7 @@ internal sealed class Galaxy : Engine {
 
         if (selectedPlanet != null) {
             RenderSelectedPlanet(g);
-        } else if (selectedSystem != null) {
+        } else if (selectedBody != null) {
             RenderSelectedSystem(g);
         } else {
             RenderGalaxy(g);
@@ -111,7 +112,7 @@ internal sealed class Galaxy : Engine {
         (uint x, uint y) currentSector;
         for (currentSector.y = 0; currentSector.y < ySectors; currentSector.y++) {
             for (currentSector.x = 0; currentSector.x < xSectors; currentSector.x++) {
-                var system = new SolarSystem(
+                var system = new StarSystem(
                     currentSector.x + (uint)universeOffset.x,
                     currentSector.y + (uint)universeOffset.y);
 
@@ -145,9 +146,10 @@ internal sealed class Galaxy : Engine {
     }
 
     private void RenderSelectedSystem(in Graphics g) {
-        if (selectedSystem == null) return;
+        if (selectedBody == null) return;
+        if (selectedBody is not StarSystem system) return;
 
-        int planetCount = selectedSystem.Planets.Count;
+        int planetCount = system.Planets.Count;
         if (uiEnabled) {
             var bgCol = Color.FromArgb(180, Color.Black);
             using var bgBrush = new SolidBrush(bgCol);
@@ -155,13 +157,13 @@ internal sealed class Galaxy : Engine {
 
             string systemInfoStr =
                 $"System Info:\n" +
-                $" Star Size: {selectedSystem.StarDiameter:F2}\n" +
-                $" Star Color: {selectedSystem.StarCol.Name}\n" +
-                $" Planets: {selectedSystem.Planets.Count}";
+                $" Star Size: {system.StarDiameter:F2}\n" +
+                $" Star Color: {system.StarCol.Name}\n" +
+                $" Planets: {system.Planets.Count}";
             g.DrawString(systemInfoStr, _infoFont, _whiteBrush, 10, 10);
 
             if (planetCount > 0) {
-                Planet selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
+                Planet selectedPlanet = system.Planets[selectedPlanetInd];
                 string planetInfoStr =
                     $"Selected Planet Info:\n" +
                     $" Distance From Sun: {selectedPlanet.Dist:F4}\n" +
@@ -178,14 +180,14 @@ internal sealed class Galaxy : Engine {
             }
         }
 
-        using var starBrush = new SolidBrush(selectedSystem.StarCol);
+        using var starBrush = new SolidBrush(system.StarCol);
         (float x, float y) body = (6f, 356f);
-        float size = (float)(selectedSystem.StarDiameter * 4f);
+        float size = (float)(system.StarDiameter * 4f);
         g.FillEllipse(starBrush, body.x, body.y - size / 2, size, size);
         body.x += size + 18f;
 
         for (int i = 0; i < planetCount; i++) {
-            Planet planet = selectedSystem.Planets[i];
+            Planet planet = system.Planets[i];
             float di = (float)planet.Diameter, di2 = di / 2;
             if (body.x >= WindowSize.Width - 32f - di) break;
 
@@ -274,23 +276,24 @@ internal sealed class Galaxy : Engine {
 
     private void UpdateSelectedSystem() {
         uint x = (uint)(OffsetSelected.x / SECTORSIZE), y = (uint)(OffsetSelected.y / SECTORSIZE);
-        var system = new SolarSystem(x, y, false);
+        var system = new StarSystem(x, y, false);
         
         selectedPlanetInd = 0;
 
         if (!system.StarExists) {
-            selectedSystem = null;
+            selectedBody = null;
             return;
         }
 
-        selectedSystem = new SolarSystem(x, y, true);
+        selectedBody = new StarSystem(x, y, true);
     }
 
     private void UpdateSelectedPlanet() {
-        if (selectedSystem == null) return;
-        if (selectedSystem.Planets.Count == 0) return;
+        if (selectedBody == null) return;
+        if (selectedBody is not StarSystem system) return;
+        if (system.Planets.Count == 0) return;
 
-        selectedPlanet = selectedSystem.Planets[selectedPlanetInd];
+        selectedPlanet = system.Planets[selectedPlanetInd];
         selectedPlanet.InitializeWorld();
         selectedPlanet.LoadModifications();
         planetSelectedCoords = (0, 0);
@@ -305,7 +308,7 @@ internal sealed class Galaxy : Engine {
                 totalResources.f += f;
                 totalResources.m += m;
                 totalResources.g += g;
-            } else if (selectedSystem != null) {
+            } else if (selectedBody != null) {
                 UpdateSelectedPlanet();
             } else {
                 UpdateSelectedSystem();
@@ -331,7 +334,7 @@ internal sealed class Galaxy : Engine {
                 selectedPlanet.SaveModifications();
                 selectedPlanet = null;
             } else {
-                selectedSystem = null; 
+                selectedBody = null; 
             }
         }
         
@@ -345,10 +348,10 @@ internal sealed class Galaxy : Engine {
             if (Input.GetKeyDown('L')) planetSelectedCoords.x++;
             planetSelectedCoords.x = Math.Max(0, Math.Min((int)selectedPlanet.Diameter - 1, planetSelectedCoords.x));
             planetSelectedCoords.y = Math.Max(0, Math.Min((int)selectedPlanet.Diameter - 1, planetSelectedCoords.y));
-        } else if (selectedSystem != null) {
+        } else if (selectedBody != null && selectedBody is StarSystem system) {
             if (Input.GetKeyDown('J')) selectedPlanetInd--;
             if (Input.GetKeyDown('L')) selectedPlanetInd++;
-            int planetCount = selectedSystem.Planets.Count;
+            int planetCount = system.Planets.Count;
             selectedPlanetInd = 
                 selectedPlanetInd < 0 ? planetCount - 1 : 
                 planetCount > 0 ? selectedPlanetInd % planetCount : selectedPlanetInd;
