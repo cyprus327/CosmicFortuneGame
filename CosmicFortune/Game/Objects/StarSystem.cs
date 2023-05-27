@@ -5,11 +5,10 @@ namespace CosmicFortune.Game.Objects;
 
 internal sealed class StarSystem : GalacticBody {
     public StarSystem(uint x, uint y, bool generateFullSystem = false) {
-        Coords = (x, y);
-
         _rand = new LehmerRand((x & 0xFFFF) << 16 | (y & 0xFFFF));
-        Planets = new List<Planet>();
 
+        Coords = (x, y);
+        Planets = new List<Planet>(12);
         StarExists = _rand.Next(0, 20) == 1;
         if (!StarExists) return;
 

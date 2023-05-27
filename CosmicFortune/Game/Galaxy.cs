@@ -9,18 +9,18 @@ internal sealed class Galaxy : Engine {
 
     private const int SECTORSIZE = 16;
 
-    private (int x, int y) universeSelectedCoords = (0, 0);
+    private (int x, int y) galaxySelectedCoords = (0, 0);
     private (int x, int y) planetSelectedCoords = (0, 0);
 
     private GalacticBody? selectedBody = null; 
     private Planet? selectedPlanet = null;
     private int selectedPlanetInd = 0;
 
-    private const float UNIVERSE_NAV_SPEED = 30f;
+    private const float GALAXY_NAV_SPEED = 30f;
     private const float PLANET_NAV_SPEED = 12f;
-    private (float x, float y) universeOffset = (0f, 0f);
+    private (float x, float y) galaxyOffset = (0f, 0f);
     private (float x, float y) planetOffset = (10, 5);
-    private (int x, int y) OffsetSelected => (universeSelectedCoords.x + (int)universeOffset.x * SECTORSIZE, universeSelectedCoords.y + (int)universeOffset.y * SECTORSIZE);
+    private (int x, int y) OffsetSelected => (galaxySelectedCoords.x + (int)galaxyOffset.x * SECTORSIZE, galaxySelectedCoords.y + (int)galaxyOffset.y * SECTORSIZE);
 
     private float moveCooldown = 0f;
 
@@ -44,6 +44,8 @@ internal sealed class Galaxy : Engine {
     private (double w, double f, double m, double g) totalResources;
 
     private bool uiEnabled = true;
+
+    private readonly LehmerRand _rand = new LehmerRand(1);
 
     ~Galaxy() {        
         _infoFont.Dispose();
@@ -69,13 +71,16 @@ internal sealed class Galaxy : Engine {
     public override void Update(in Graphics g, in float deltaTime) {
         HandleInput(deltaTime);
 
-        universeSelectedCoords.x = Math.Clamp(universeSelectedCoords.x, 0, WindowSize.Width - SECTORSIZE * 3);
-        universeSelectedCoords.y = Math.Clamp(universeSelectedCoords.y, 0, WindowSize.Height - SECTORSIZE * 3);
+        galaxySelectedCoords.x = Math.Clamp(galaxySelectedCoords.x, 0, WindowSize.Width - SECTORSIZE * 3);
+        galaxySelectedCoords.y = Math.Clamp(galaxySelectedCoords.y, 0, WindowSize.Height - SECTORSIZE * 3);
 
         if (selectedPlanet != null) {
             RenderSelectedPlanet(g);
         } else if (selectedBody != null) {
-            RenderSelectedSystem(g);
+            switch (selectedBody) {
+                case StarSystem: RenderSelectedSystem(g); break;
+                case Nebula: RenderSelectedNebula(g); break;
+            }
         } else {
             RenderGalaxy(g);
         }
@@ -113,8 +118,8 @@ internal sealed class Galaxy : Engine {
         for (currentSector.y = 0; currentSector.y < ySectors; currentSector.y++) {
             for (currentSector.x = 0; currentSector.x < xSectors; currentSector.x++) {
                 var system = new StarSystem(
-                    currentSector.x + (uint)universeOffset.x,
-                    currentSector.y + (uint)universeOffset.y);
+                    currentSector.x + (uint)galaxyOffset.x,
+                    currentSector.y + (uint)galaxyOffset.y);
 
                 if (!system.StarExists) continue;
 
@@ -129,7 +134,7 @@ internal sealed class Galaxy : Engine {
                     width: starW,
                     height: starH);
 
-                if (!(universeSelectedCoords.x / SECTORSIZE == currentSector.x && universeSelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
+                if (!(galaxySelectedCoords.x / SECTORSIZE == currentSector.x && galaxySelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
                 if (!uiEnabled) continue;
 
                 g.DrawEllipse(Pens.Yellow,
@@ -142,7 +147,7 @@ internal sealed class Galaxy : Engine {
 
         if (!uiEnabled) return;
 
-        g.DrawRectangle(Pens.Red, universeSelectedCoords.x, universeSelectedCoords.y, SECTORSIZE, SECTORSIZE);
+        g.DrawRectangle(Pens.Red, galaxySelectedCoords.x, galaxySelectedCoords.y, SECTORSIZE, SECTORSIZE);
     }
 
     private void RenderSelectedSystem(in Graphics g) {
@@ -221,6 +226,13 @@ internal sealed class Galaxy : Engine {
         }
     }
     
+    private void RenderSelectedNebula(in Graphics g) {
+        if (selectedBody == null) return;
+        if (selectedBody is not Nebula nebula) return;
+
+
+    }
+
     private void RenderSelectedPlanet(in Graphics g) {
         if (selectedPlanet == null) return;
 
@@ -323,10 +335,10 @@ internal sealed class Galaxy : Engine {
             if (Input.GetKeyDown('S')) planetOffset.y -= PLANET_NAV_SPEED * deltaTime * 2;
             if (Input.GetKeyDown('D')) planetOffset.x -= PLANET_NAV_SPEED * deltaTime;
         } else {
-            if (Input.GetKeyDown('W')) universeOffset.y -= UNIVERSE_NAV_SPEED * deltaTime;
-            if (Input.GetKeyDown('A')) universeOffset.x -= UNIVERSE_NAV_SPEED * deltaTime;
-            if (Input.GetKeyDown('S')) universeOffset.y += UNIVERSE_NAV_SPEED * deltaTime;
-            if (Input.GetKeyDown('D')) universeOffset.x += UNIVERSE_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('W')) galaxyOffset.y -= GALAXY_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('A')) galaxyOffset.x -= GALAXY_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('S')) galaxyOffset.y += GALAXY_NAV_SPEED * deltaTime;
+            if (Input.GetKeyDown('D')) galaxyOffset.x += GALAXY_NAV_SPEED * deltaTime;
         }
 
         if (Input.GetKeyUp((char)27)) {
@@ -356,10 +368,10 @@ internal sealed class Galaxy : Engine {
                 selectedPlanetInd < 0 ? planetCount - 1 : 
                 planetCount > 0 ? selectedPlanetInd % planetCount : selectedPlanetInd;
         } else {
-            if (Input.GetKeyDown('I')) universeSelectedCoords.y -= SECTORSIZE;
-            if (Input.GetKeyDown('J')) universeSelectedCoords.x -= SECTORSIZE;
-            if (Input.GetKeyDown('K')) universeSelectedCoords.y += SECTORSIZE;
-            if (Input.GetKeyDown('L')) universeSelectedCoords.x += SECTORSIZE;
+            if (Input.GetKeyDown('I')) galaxySelectedCoords.y -= SECTORSIZE;
+            if (Input.GetKeyDown('J')) galaxySelectedCoords.x -= SECTORSIZE;
+            if (Input.GetKeyDown('K')) galaxySelectedCoords.y += SECTORSIZE;
+            if (Input.GetKeyDown('L')) galaxySelectedCoords.x += SECTORSIZE;
         }
 
         moveCooldown = 0f;
