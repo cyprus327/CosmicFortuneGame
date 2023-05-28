@@ -1,6 +1,7 @@
 ﻿using CosmicFortune.Common;
 using CosmicFortune.Rendering;
 using CosmicFortune.Game.Objects;
+using System.Drawing.Drawing2D;
 
 namespace CosmicFortune.Game;
 
@@ -77,10 +78,7 @@ internal sealed class Galaxy : Engine {
         if (selectedPlanet != null) {
             RenderSelectedPlanet(g);
         } else if (selectedBody != null) {
-            switch (selectedBody) {
-                case StarSystem: RenderSelectedSystem(g); break;
-                case Nebula: RenderSelectedNebula(g); break;
-            }
+            RenderSelectedBody(g);
         } else {
             RenderGalaxy(g);
         }
@@ -117,22 +115,46 @@ internal sealed class Galaxy : Engine {
         (uint x, uint y) currentSector;
         for (currentSector.y = 0; currentSector.y < ySectors; currentSector.y++) {
             for (currentSector.x = 0; currentSector.x < xSectors; currentSector.x++) {
-                var system = new StarSystem(
+                var body = GalacticBody.At(
                     currentSector.x + (uint)galaxyOffset.x,
                     currentSector.y + (uint)galaxyOffset.y);
 
-                if (!system.StarExists) continue;
+                if (body == null) continue;
 
-                using var brush = new SolidBrush(system.StarCol);
+                if (body is StarSystem system) {
+                    if (!system.StarExists) continue;
 
-                int starW = (int)system.StarDiameter / (SECTORSIZE / 2);
-                int starH = (int)system.StarDiameter / (SECTORSIZE / 2);
+                    using var brush = new SolidBrush(system.StarCol);
 
-                g.FillEllipse(brush,
-                    x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - (starW / 2),
-                    y: currentSector.y * SECTORSIZE + (SECTORSIZE / 2) - (starH / 2),
-                    width: starW,
-                    height: starH);
+                    int starW = (int)system.StarDiameter / (int)(SECTORSIZE / 2);
+                    int starH = (int)system.StarDiameter / (int)(SECTORSIZE / 2);
+
+                    g.FillEllipse(brush,
+                        x: currentSector.x * SECTORSIZE + (int)(SECTORSIZE / 2) - (starW / 2),
+                        y: currentSector.y * SECTORSIZE + (int)(SECTORSIZE / 2) - (starH / 2),
+                        width: starW,
+                        height: starH);
+                } else if (body is Nebula nebula) {
+                    if (!nebula.NebulaExists) continue;
+
+                    using var brush = new SolidBrush(nebula.OverallCol);
+
+                    // triangle temporarily symbolizes a nebula
+                    g.FillPolygon(brush,
+                        new Point[] {
+                            new Point((int)(currentSector.x * SECTORSIZE), (int)currentSector.y * SECTORSIZE + SECTORSIZE),
+                            new Point((int)(currentSector.x * SECTORSIZE + SECTORSIZE / 2), (int)currentSector.y * SECTORSIZE),
+                            new Point((int)(currentSector.x * SECTORSIZE + SECTORSIZE), (int)(currentSector.y * SECTORSIZE + SECTORSIZE))
+                        });
+                } else if (body is BlackHole) {
+                    using var pen = new Pen(_whiteBrush);
+
+                    g.DrawEllipse(pen,
+                        (int)currentSector.x * SECTORSIZE,
+                        (int)currentSector.y * SECTORSIZE,
+                        SECTORSIZE,
+                        SECTORSIZE);
+                }
 
                 if (!(galaxySelectedCoords.x / SECTORSIZE == currentSector.x && galaxySelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
                 if (!uiEnabled) continue;
@@ -150,13 +172,22 @@ internal sealed class Galaxy : Engine {
         g.DrawRectangle(Pens.Red, galaxySelectedCoords.x, galaxySelectedCoords.y, SECTORSIZE, SECTORSIZE);
     }
 
+    private void RenderSelectedBody(in Graphics g) {
+        RenderGalaxy(g);
+
+        switch (selectedBody) {
+            case StarSystem: RenderSelectedSystem(g); break;
+            case Nebula: RenderSelectedNebula(g); break;
+        }
+    }
+
     private void RenderSelectedSystem(in Graphics g) {
         if (selectedBody == null) return;
         if (selectedBody is not StarSystem system) return;
 
         int planetCount = system.Planets.Count;
         if (uiEnabled) {
-            var bgCol = Color.FromArgb(180, Color.Black);
+            var bgCol = Color.FromArgb(220, Color.Black);
             using var bgBrush = new SolidBrush(bgCol);
             g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
 
@@ -230,7 +261,17 @@ internal sealed class Galaxy : Engine {
         if (selectedBody == null) return;
         if (selectedBody is not Nebula nebula) return;
 
+        if (uiEnabled) {
+            var bgCol = Color.FromArgb(220, Color.Black);
+            using var bgBrush = new SolidBrush(bgCol);
+            g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
+        }
 
+        (float x, float y) zero = (WindowSize.Width / 2 - 180, WindowSize.Height / 2 - 180);
+        foreach (var cloud in nebula.Clouds) {
+            using var brush = new SolidBrush(cloud.Col);
+            g.FillEllipse(brush, zero.x + cloud.Pos.x, zero.y + cloud.Pos.y, cloud.Size.w, cloud.Size.h);
+        }
     }
 
     private void RenderSelectedPlanet(in Graphics g) {
@@ -286,18 +327,43 @@ internal sealed class Galaxy : Engine {
         g.DrawString($"Planet Info:\n{planetInfo}", _infoFont, _whiteBrush, 10, (int)max * 4 + 20);
     }
 
-    private void UpdateSelectedSystem() {
-        uint x = (uint)(OffsetSelected.x / SECTORSIZE), y = (uint)(OffsetSelected.y / SECTORSIZE);
-        var system = new StarSystem(x, y, false);
-        
+    private void UpdateSelectedBody() {
         selectedPlanetInd = 0;
 
-        if (!system.StarExists) {
+        uint x = (uint)(OffsetSelected.x / SECTORSIZE), y = (uint)(OffsetSelected.y / SECTORSIZE);
+        var body = GalacticBody.At(x, y);
+
+        if (body == null) {
             selectedBody = null;
             return;
         }
 
-        selectedBody = new StarSystem(x, y, true);
+        if (body is StarSystem system) {
+            if (!system.StarExists) {
+                selectedBody = null;
+                return;
+            }
+
+            selectedBody = new StarSystem(x, y, true);
+            return;
+        }
+
+        if (body is Nebula nebula) {
+            if (!nebula.NebulaExists) {
+                selectedBody = null;
+                return;
+            }
+
+            selectedBody = new Nebula(x, y, true);
+            return;
+        }
+
+        if (body is BlackHole) {
+            totalResources = (0d, 0d, 0d, 0d);
+
+            selectedBody = new BlackHole(x, y);
+            return;
+        }
     }
 
     private void UpdateSelectedPlanet() {
@@ -323,7 +389,7 @@ internal sealed class Galaxy : Engine {
             } else if (selectedBody != null) {
                 UpdateSelectedPlanet();
             } else {
-                UpdateSelectedSystem();
+                UpdateSelectedBody();
             }
         }
 

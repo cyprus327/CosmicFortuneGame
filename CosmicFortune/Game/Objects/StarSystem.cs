@@ -1,5 +1,4 @@
 ﻿using CosmicFortune.Common;
-using System.Collections.Generic;
 
 namespace CosmicFortune.Game.Objects;
 
@@ -9,6 +8,8 @@ internal sealed class StarSystem : GalacticBody {
 
         Coords = (x, y);
         Planets = new List<Planet>(12);
+        
+        // this should always be true because of GalacticBody.At
         StarExists = _rand.Next(0, 20) == 1;
         if (!StarExists) return;
 
