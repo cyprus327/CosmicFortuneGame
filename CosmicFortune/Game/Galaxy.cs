@@ -44,10 +44,6 @@ internal sealed class Galaxy : Engine {
     private readonly string _resourcesFile = $"SaveData{Path.DirectorySeparatorChar}resources.txt";
     private (double w, double f, double m, double g) totalResources;
 
-    private bool uiEnabled = true;
-
-    private readonly LehmerRand _rand = new LehmerRand(1);
-
     ~Galaxy() {        
         _infoFont.Dispose();
         _whiteBrush.Dispose();
@@ -91,8 +87,6 @@ internal sealed class Galaxy : Engine {
     }
 
     private void RenderStats(in Graphics g) {
-        if (!uiEnabled) return;
-
         int x = WindowSize.Width - 200;
         using var bgBrush = new SolidBrush(Color.FromArgb(180, Color.Black));
         g.FillRectangle(bgBrush, x, 10, 175, 500);
@@ -157,7 +151,6 @@ internal sealed class Galaxy : Engine {
                 }
 
                 if (!(galaxySelectedCoords.x / SECTORSIZE == currentSector.x && galaxySelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
-                if (!uiEnabled) continue;
 
                 g.DrawEllipse(Pens.Yellow,
                     x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - ((SECTORSIZE - 4) / 2),
@@ -166,8 +159,6 @@ internal sealed class Galaxy : Engine {
                     height: SECTORSIZE - 4);
             }
         }
-
-        if (!uiEnabled) return;
 
         g.DrawRectangle(Pens.Red, galaxySelectedCoords.x, galaxySelectedCoords.y, SECTORSIZE, SECTORSIZE);
     }
@@ -186,34 +177,32 @@ internal sealed class Galaxy : Engine {
         if (selectedBody is not StarSystem system) return;
 
         int planetCount = system.Planets.Count;
-        if (uiEnabled) {
-            var bgCol = Color.FromArgb(220, Color.Black);
-            using var bgBrush = new SolidBrush(bgCol);
-            g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
+        var bgCol = Color.FromArgb(220, Color.Black);
+        using var bgBrush = new SolidBrush(bgCol);
+        g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
 
-            string systemInfoStr =
-                $"System Info:\n" +
-                $" Star Size: {system.StarDiameter:F2}\n" +
-                $" Star Color: {system.StarCol.Name}\n" +
-                $" Planets: {system.Planets.Count}";
-            g.DrawString(systemInfoStr, _infoFont, _whiteBrush, 10, 10);
+        string systemInfoStr =
+            $"System Info:\n" +
+            $" Star Size: {system.StarDiameter:F2}\n" +
+            $" Star Color: {system.StarCol.Name}\n" +
+            $" Planets: {system.Planets.Count}";
+        g.DrawString(systemInfoStr, _infoFont, _whiteBrush, 10, 10);
 
-            if (planetCount > 0) {
-                Planet selectedPlanet = system.Planets[selectedPlanetInd];
-                string planetInfoStr =
-                    $"Selected Planet Info:\n" +
-                    $" Distance From Sun: {selectedPlanet.Dist:F4}\n" +
-                    $" Diameter: {selectedPlanet.Diameter:F4}\n" +
-                    $" Ambient Temperature (F): {selectedPlanet.Temp:F4}\n" +
-                    $" Water: {selectedPlanet.Water:F2}\n" +
-                    $" Foliage: {selectedPlanet.Foliage:F2}\n" +
-                    $" Minerals: {selectedPlanet.Minerals:F2}\n" +
-                    $" Gases: {selectedPlanet.Gases:F2}\n" +
-                    $" Population: {selectedPlanet.Population}\n" +
-                    $" Has a ring: {selectedPlanet.HasRing}\n" +
-                    $" Moons: {selectedPlanet.Moons.Count}";
-                g.DrawString(planetInfoStr, _infoFont, _whiteBrush, 260, 10);
-            }
+        if (planetCount > 0) {
+            Planet selectedPlanet = system.Planets[selectedPlanetInd];
+            string planetInfoStr =
+                $"Selected Planet Info:\n" +
+                $" Distance From Sun: {selectedPlanet.Dist:F4}\n" +
+                $" Diameter: {selectedPlanet.Diameter:F4}\n" +
+                $" Ambient Temperature (F): {selectedPlanet.Temp:F4}\n" +
+                $" Water: {selectedPlanet.Water:F2}\n" +
+                $" Foliage: {selectedPlanet.Foliage:F2}\n" +
+                $" Minerals: {selectedPlanet.Minerals:F2}\n" +
+                $" Gases: {selectedPlanet.Gases:F2}\n" +
+                $" Population: {selectedPlanet.Population}\n" +
+                $" Has a ring: {selectedPlanet.HasRing}\n" +
+                $" Moons: {selectedPlanet.Moons.Count}";
+            g.DrawString(planetInfoStr, _infoFont, _whiteBrush, 260, 10);
         }
 
         using var starBrush = new SolidBrush(system.StarCol);
@@ -261,11 +250,9 @@ internal sealed class Galaxy : Engine {
         if (selectedBody == null) return;
         if (selectedBody is not Nebula nebula) return;
 
-        if (uiEnabled) {
-            var bgCol = Color.FromArgb(220, Color.Black);
-            using var bgBrush = new SolidBrush(bgCol);
-            g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
-        }
+        var bgCol = Color.FromArgb(220, Color.Black);
+        using var bgBrush = new SolidBrush(bgCol);
+        g.FillRectangle(bgBrush, 0, 0, WindowSize.Width, WindowSize.Height);
 
         (float x, float y) zero = (WindowSize.Width / 2 - 180, WindowSize.Height / 2 - 180);
         foreach (var cloud in nebula.Clouds) {
@@ -307,8 +294,6 @@ internal sealed class Galaxy : Engine {
                 }
             }
         }
-
-        if (!uiEnabled) return;
 
         g.DrawImageUnscaled(_selectorTile, selected.x, selected.y);
 
@@ -392,8 +377,6 @@ internal sealed class Galaxy : Engine {
                 UpdateSelectedBody();
             }
         }
-
-        if (Input.GetKeyUp((char)9)) uiEnabled = !uiEnabled;
 
         if (selectedPlanet != null) {
             if (Input.GetKeyDown('W')) planetOffset.y += PLANET_NAV_SPEED * deltaTime * 2;
