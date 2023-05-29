@@ -9,62 +9,47 @@ internal sealed class StarSystem : GalacticBody {
         Coords = (x, y);
         Planets = new List<Planet>(12);
         
-        // this should always be true because of GalacticBody.At
         StarExists = _rand.Next(0, 20) == 1;
         if (!StarExists) return;
 
-        StarDiameter = _rand.Next(10d, 40d);
+        StarDiameter = _rand.Next(20d, 60d);
         StarCol = Colors[_rand.Next(0, Colors.Length)];
 
         if (!generateFullSystem) return;
-
-        double normalize(double val, double min, double max) =>
-            Math.Clamp((val - min) / (max - min), 0, 1);
 
         double distFromStar = _rand.Next(40d, 180d);
         int planetCount = _rand.Next(0, 12);
         for (int i = 0; i < planetCount; i++) {
             // currently completely arbitrary numbers
-            double temp = Math.Max(-190d, (StarDiameter * 20 - distFromStar * 1.5d) / 3) - _rand.Next(0d, 20d);
             double dist = distFromStar += _rand.Next(30d, 200d);
             double diam = _rand.Next(4d, 20d);
 
-            double water = 1 / (temp * Math.Sign(temp) == -1 ? -1.5 : 1) * 720 * _rand.Next(0.0, 1.0);
-            water = normalize(water, -200, 2000);
-
-            double foliage = temp < 50 ? _rand.Next(0.001, 0.1) : normalize(water * (0.8 + 0.4 * _rand.Next(0.0, 1.0)), -1, 2);
-
-            double minerals = _rand.Next(0.01, 0.99);
-            minerals = normalize(minerals, 0.01, 1);
-
-            double gases = _rand.Next(0.0, 1.0) * water;
-
-            double pop = _rand.Next(0d, 100000000d);
-            pop *= 1 + (temp / 100d);
-            pop *= 1 + foliage;
-            pop *= 1 + minerals;
-            pop *= 1 + gases;
-            pop *= 1 + water;
-            pop *= Math.Sign(pop);
-            pop *= Math.Sign(_rand.Next(-999, 2));
-            pop = 0;//Math.Max(0, pop);
+            double water = Math.Max(0, _rand.Next(0d, 5d) - 4d);
+            double foliage = _rand.Next(0d, 1d) * water;
+            double minerals = _rand.Next(0.2, 1d);
+            double gases = Math.Clamp(_rand.Next(0d, 1d) + water * 0.5, 0d, 1d);
 
             bool hasRing = _rand.Next(0, 8) == 1;
 
-            byte red = (byte)(gases * 190);
-            byte green = (byte)(foliage * 200);
-            byte blue = (byte)(water * 240);
-            Color col = Color.FromArgb(red, green, blue);
+            (double r, double g, double b) rands = (
+                Math.Min(1, _rand.Next(0d, 1.5d)),
+                Math.Min(1, _rand.Next(0d, 1.5d)),
+                Math.Min(1, _rand.Next(0d, 1.5d)));
+            byte red = (byte)((gases + minerals) / 2 * 190 * rands.r);
+            byte green = (byte)(foliage * 240 * rands.g);
+            byte blue = (byte)(water * 240 * rands.b);
+            Color col = (water + foliage) switch {
+                > 0.4 => Color.FromArgb(red / 2, green, blue),
+                _ => Color.FromArgb((byte)(rands.r * 100d), (byte)(rands.g * 100d), (byte)(rands.b * 180d))
+            };
 
             var p = new Planet() {
-                Temp = temp,
                 Dist = dist,
                 Diameter = diam,
                 Foliage = foliage,
                 Water = water,
                 Minerals = minerals,
                 Gases = gases,
-                Population = pop,
                 HasRing = hasRing,
                 Col = col,
                 Coords = ((int)(Coords.x + dist), (int)(Coords.y + dist))

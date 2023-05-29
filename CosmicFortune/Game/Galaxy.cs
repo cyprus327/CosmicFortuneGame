@@ -1,7 +1,6 @@
 ﻿using CosmicFortune.Common;
 using CosmicFortune.Rendering;
 using CosmicFortune.Game.Objects;
-using System.Drawing.Drawing2D;
 
 namespace CosmicFortune.Game;
 
@@ -194,12 +193,10 @@ internal sealed class Galaxy : Engine {
                 $"Selected Planet Info:\n" +
                 $" Distance From Sun: {selectedPlanet.Dist:F4}\n" +
                 $" Diameter: {selectedPlanet.Diameter:F4}\n" +
-                $" Ambient Temperature (F): {selectedPlanet.Temp:F4}\n" +
                 $" Water: {selectedPlanet.Water:F2}\n" +
                 $" Foliage: {selectedPlanet.Foliage:F2}\n" +
                 $" Minerals: {selectedPlanet.Minerals:F2}\n" +
                 $" Gases: {selectedPlanet.Gases:F2}\n" +
-                $" Population: {selectedPlanet.Population}\n" +
                 $" Has a ring: {selectedPlanet.HasRing}\n" +
                 $" Moons: {selectedPlanet.Moons.Count}";
             g.DrawString(planetInfoStr, _infoFont, _whiteBrush, 260, 10);

@@ -9,8 +9,6 @@ internal sealed class Planet {
     public double Minerals = 0d;
     public double Water = 0d;
     public double Gases = 0d;
-    public double Temp = 0d;
-    public double Population = 0d;
     public bool HasRing = false;
     public List<double> Moons = new List<double>();
     public Color Col = Color.HotPink;
@@ -28,22 +26,18 @@ internal sealed class Planet {
         _world = new PlanetChunk[(int)Diameter * (int)Diameter];
 
         for (int i = 0; i < _world.Length; i++) {
-            if (Foliage >= 0.7) {
+            if (Water > 0.35 && Foliage > 0.15) {
                 _world[i].TileInd = rand.Next(1, 7);
-            } else if (Minerals >= 0.7) {
+            } else if (Minerals + Gases >= 0.75) {
                 _world[i].TileInd = rand.Next(6, 8);
             } else {
-                _world[i].TileInd = rand.Next(1, 8);
+                _world[i].TileInd = 7;
             }
 
             _world[i].Water = rand.Next(0.1, 0.6) * Water;
             _world[i].Foliage = rand.Next(0.1, 0.6) * Foliage;
             _world[i].Minerals = rand.Next(0.1, 0.6) * Minerals;
             _world[i].Gases = rand.Next(0.1, 0.6) * Gases;
-            _world[i].Total = _world[i].Water + 
-                              _world[i].Foliage + 
-                              _world[i].Minerals +
-                              _world[i].Gases;
         }
     }
 
@@ -106,22 +100,21 @@ internal sealed class Planet {
                 Foliage = double.Parse(values[3]),
                 Minerals = double.Parse(values[4]),
                 Gases = double.Parse(values[5]),
-                Total = double.Parse(values[6])
             };
             _world[i] = modifiedChunk;
             _modifiedVals.Add((i, modifiedChunk));
         }
     }
 }
+
 internal struct PlanetChunk {
     public int TileInd;
     public double Water;
     public double Foliage;
     public double Minerals;
     public double Gases;
-    public double Total;
 
     public override string ToString() {
-        return $"{TileInd},{Water},{Foliage},{Minerals},{Gases},{Total}";
+        return $"{TileInd},{Water},{Foliage},{Minerals},{Gases}";
     }
 }
