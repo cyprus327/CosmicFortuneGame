@@ -28,6 +28,6 @@ internal sealed class LehmerRand {
     }
 
     public double Next(double min, double max) {
-        return ((double)Next() / (double)(0x7FFFFFFF)) * (max - min) + min;
+        return ((double)Next() / (double)(uint.MaxValue)) * (max - min) + min;
     }
 }
