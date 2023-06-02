@@ -9,6 +9,8 @@ internal sealed class Galaxy : Engine {
 
     private const int SECTORSIZE = 16;
 
+    private bool gameStarted = false, changedSeed = false;
+
     private (int x, int y) galaxySelectedCoords = (0, 0);
     private (int x, int y) planetSelectedCoords = (0, 0);
 
@@ -40,55 +42,63 @@ internal sealed class Galaxy : Engine {
     }
 
     public override void Update(in Graphics g, in float deltaTime) {
+        // simple temporary main menu
+        if (!gameStarted) {
+            using Brush brush = new SolidBrush(Color.FromArgb(180, Color.Black));
+            g.DrawGalaxy(WindowSize, SECTORSIZE, (0f, 0f), (0, 0), false);
+            g.FillRectangle(brush, 0, 0, WindowSize.Width, WindowSize.Height);
+            DrawCenteredString(g, "Press Space to Play...", WindowSize.Height / 2 - 12);
+            DrawCenteredString(g, "Use the arrow keys to increment the seed, R to get a random seed.", WindowSize.Height - 80);
+            DrawCenteredString(g, $"Seed = {LehmerRand.Seed}", WindowSize.Height - 60);
+
+            bool changedSeedState = changedSeed;
+            if (Input.GetKeyDown((char)39) || Input.GetKeyUp((char)38)) {
+                changedSeed = true;
+                LehmerRand.Seed++;
+            } else if (Input.GetKeyDown((char)37) || Input.GetKeyUp((char)40)) {
+                changedSeed = true;
+                LehmerRand.Seed--;
+            } else if (Input.GetKeyUp('R')) {
+                changedSeed = true;
+                LehmerRand.Seed = (uint)Random.Shared.Next();
+            }
+            if (changedSeedState != changedSeed) {
+                // clear resources the first time the seed gets changed
+                File.WriteAllText(ResourcesFile, "(0.0, 0.0, 0.0, 0.0)");
+                totalResources = (0d, 0d, 0d, 0d);
+            }
+
+            if (Input.GetKeyDown(' ')) {
+                gameStarted = true;
+            }
+
+            return;
+        }
+
         HandleInput(deltaTime);
 
         galaxySelectedCoords.x = Math.Clamp(galaxySelectedCoords.x, 0, WindowSize.Width - SECTORSIZE * 3);
         galaxySelectedCoords.y = Math.Clamp(galaxySelectedCoords.y, 0, WindowSize.Height - SECTORSIZE * 3);
 
         if (selectedPlanet != null) {
-            PlanetRenderer.DrawPlanet(g, selectedPlanet, planetOffset, planetSelectedCoords);
+            g.DrawPlanet(selectedPlanet, planetOffset, planetSelectedCoords);
         } else if (selectedBody != null) {
-            CloseRenderer.DrawBody(g, selectedBody, WindowSize, selectedPlanetInd);
+            g.DrawBody(WindowSize, selectedBody, selectedPlanetInd);
         } else {
-            DrawGalaxy(g);
+            g.DrawGalaxy(WindowSize, SECTORSIZE, galaxyOffset, galaxySelectedCoords);
         }
 
-        GalacticRenderer.DrawStats(g, totalResources, WindowSize);
+        g.DrawStats(WindowSize, totalResources);
 
         if ((int)Time.ElapsedTime % 10 == 0) {
             File.WriteAllText(ResourcesFile, totalResources.ToString());
         }
     }
 
-    // TODO move this to GalacticRenderer
-    private void DrawGalaxy(in Graphics g) {
-        if (selectedPlanet != null) return;
-
-        int xSectors = WindowSize.Width / SECTORSIZE;
-        int ySectors = WindowSize.Height / SECTORSIZE;
-
-        (uint x, uint y) currentSector;
-        for (currentSector.y = 0; currentSector.y < ySectors; currentSector.y++) {
-            for (currentSector.x = 0; currentSector.x < xSectors; currentSector.x++) {
-                var body = GalacticBody.At(
-                    currentSector.x + (uint)galaxyOffset.x,
-                    currentSector.y + (uint)galaxyOffset.y);
-
-                if (body == null) continue;
-
-                GalacticRenderer.DrawBody(g, body, currentSector, SECTORSIZE);
-                
-                if (!(galaxySelectedCoords.x / SECTORSIZE == currentSector.x && galaxySelectedCoords.y / SECTORSIZE == currentSector.y)) continue;
-
-                g.DrawEllipse(Pens.Yellow,
-                    x: currentSector.x * SECTORSIZE + (SECTORSIZE / 2) - ((SECTORSIZE - 4) / 2),
-                    y: currentSector.y * SECTORSIZE + (SECTORSIZE / 2) - ((SECTORSIZE - 4) / 2),
-                    width: SECTORSIZE - 4,
-                    height: SECTORSIZE - 4);
-            }
-        }
-
-        g.DrawRectangle(Pens.Red, galaxySelectedCoords.x, galaxySelectedCoords.y, SECTORSIZE, SECTORSIZE);
+    private void DrawCenteredString(in Graphics g, in string str, in int yOffset = 0) {
+        SizeF size = g.MeasureString(str, Materials.InfoFont);
+        g.DrawString(str, Materials.InfoFont, Materials.WhiteBrush,
+            new Point(WindowSize.Width / 2 - (int)(size.Width / 2), yOffset - (int)size.Height));
     }
 
     private void UpdateSelectedBody() {

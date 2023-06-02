@@ -3,23 +3,23 @@
 namespace CosmicFortune.Rendering;
 
 internal static class CloseRenderer {
-    public static void DrawBody(in Graphics g, in GalacticBody? body, in Size windowSize, in int selectedPlanetInd = 0) {
+    public static void DrawBody(this Graphics g, in Size windowSize, in GalacticBody? body, in int selectedPlanetInd = 0) {
         if (body == null) return;
 
         switch (body) {
             case StarSystem:
-                DrawStarSystem(g, (StarSystem)body, windowSize, selectedPlanetInd);
+                DrawStarSystem(g, windowSize, (StarSystem)body, selectedPlanetInd);
                 break;
             case Nebula:
-                DrawNebula(g, (Nebula)body, windowSize);
+                DrawNebula(g, windowSize, (Nebula)body);
                 break;
             case BlackHole:
-                DrawBlackHole(g, (BlackHole)body, windowSize);
+                DrawBlackHole(g, windowSize, (BlackHole)body);
                 break;
         }
     }
 
-    private static void DrawStarSystem(in Graphics g, in StarSystem system, in Size windowSize, in int selectedPlanetInd) {
+    private static void DrawStarSystem(in Graphics g, in Size windowSize, in StarSystem system, in int selectedPlanetInd) {
         if (!system.StarExists) return;
 
         int planetCount = system.Planets.Count;
@@ -90,7 +90,7 @@ internal static class CloseRenderer {
         }
     }
 
-    private static void DrawNebula(in Graphics g, in Nebula nebula, in Size windowSize) {
+    private static void DrawNebula(in Graphics g, in Size windowSize, in Nebula nebula) {
         var bgCol = Color.FromArgb(220, Color.Black);
         using var bgBrush = new SolidBrush(bgCol);
         g.FillRectangle(bgBrush, 0, 0, windowSize.Width, windowSize.Height);
@@ -102,7 +102,7 @@ internal static class CloseRenderer {
         }
     }
 
-    private static void DrawBlackHole(in Graphics g, in BlackHole bh, in Size windowSize) {
+    private static void DrawBlackHole(in Graphics g, in Size windowSize, in BlackHole bh) {
         g.DrawEllipse(Materials.WhitePen,
             windowSize.Width / 2 - 240,
             windowSize.Height / 2 - 240,

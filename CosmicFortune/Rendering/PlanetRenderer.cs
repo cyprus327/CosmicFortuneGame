@@ -16,7 +16,7 @@ internal static class PlanetRenderer {
         (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}stoneTile1.png"), // 7
     };
 
-    public static void DrawPlanet(in Graphics g, in Planet selectedPlanet, (float x, float y) offset, (int x, int y) coords) {
+    public static void DrawPlanet(this Graphics g, in Planet selectedPlanet, (float x, float y) offset, in (int x, int y) coords) {
         if (selectedPlanet == null) return;
 
         g.Clear(selectedPlanet.Col);
