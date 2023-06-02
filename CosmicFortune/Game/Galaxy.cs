@@ -28,6 +28,7 @@ internal sealed class Galaxy : Engine {
 
     private (double w, double f, double m, double g) totalResources;
 
+    public static string SeedFile { get; } = $"SaveData{Path.DirectorySeparatorChar}seed.txt";
     public static string ResourcesFile { get; } = $"SaveData{Path.DirectorySeparatorChar}resources.txt";
 
     public override void Awake() {
@@ -52,10 +53,16 @@ internal sealed class Galaxy : Engine {
             DrawCenteredString(g, $"Seed = {LehmerRand.Seed}", WindowSize.Height - 60);
 
             bool changedSeedState = changedSeed;
-            if (Input.GetKeyDown((char)39) || Input.GetKeyUp((char)38)) {
+            if (Input.GetKeyUp((char)38)) {
                 changedSeed = true;
                 LehmerRand.Seed++;
-            } else if (Input.GetKeyDown((char)37) || Input.GetKeyUp((char)40)) {
+            } else if (Input.GetKeyDown((char)37)) {
+                changedSeed = true;
+                LehmerRand.Seed -= 100;
+            } else if (Input.GetKeyDown((char)39)) {
+                changedSeed = true;
+                LehmerRand.Seed += 100;
+            } else if (Input.GetKeyUp((char)40)) {
                 changedSeed = true;
                 LehmerRand.Seed--;
             } else if (Input.GetKeyUp('R')) {
@@ -69,6 +76,7 @@ internal sealed class Galaxy : Engine {
             }
 
             if (Input.GetKeyDown(' ')) {
+                File.WriteAllText(SeedFile, $"{LehmerRand.Seed}");
                 gameStarted = true;
             }
 
