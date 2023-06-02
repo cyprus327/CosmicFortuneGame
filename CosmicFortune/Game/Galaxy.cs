@@ -94,10 +94,11 @@ internal sealed class Galaxy : Engine {
 
         if (selectedPlanet != null) {
             g.DrawPlanet(selectedPlanet, planetOffset, planetSelectedCoords);
-        } else if (selectedBody != null) {
-            g.DrawBody(WindowSize, selectedBody, selectedPlanetInd);
         } else {
             g.DrawGalaxy(WindowSize, SECTORSIZE, galaxyOffset, galaxySelectedCoords);
+            if (selectedBody != null) {
+                g.DrawBody(WindowSize, selectedBody, selectedPlanetInd);
+            }
         }
 
         g.DrawStats(WindowSize, totalResources);

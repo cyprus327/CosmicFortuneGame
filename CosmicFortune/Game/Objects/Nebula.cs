@@ -7,7 +7,7 @@ internal sealed class Nebula : GalacticBody {
         _rand = new LehmerRand((x & 0xFFFF) << 16 | (y & 0xFFFF));
 
         Coords = (x, y);
-        Clouds = new List<Cloud>(75);
+        Clouds = new List<Cloud>(150);
         NebulaExists = _rand.Next(0, 20) == 1;
         if (!NebulaExists) return;
         
@@ -25,7 +25,7 @@ internal sealed class Nebula : GalacticBody {
 
         if (!generateFullNebula) return;
 
-        int cloudCount = _rand.Next(100, 200);
+        int cloudCount = _rand.Next(75, 150);
         for (int i = 0; i < cloudCount; i++) {
             Color col = Color.FromArgb(180, _rand.Next(0, 2) == 1 ? cols.s : cols.e);
             (int, int) pos = (_rand.Next(0, 180), _rand.Next(0, 180));
