@@ -40,6 +40,10 @@ internal sealed class Galaxy : Engine {
         }
 
         totalResources = File.Exists(ResourcesFile) ? parseResources() : (0d, 0d, 0d, 0d);
+
+        if (File.Exists(SeedFile)) {
+            LehmerRand.Seed = uint.Parse(File.ReadAllText(SeedFile));
+        }
     }
 
     public override void Update(in Graphics g, in float deltaTime) {
