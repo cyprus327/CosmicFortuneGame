@@ -1,6 +1,6 @@
 # Cosmic Fortune
 
-Explore a vast procedurally generated universe filled with unique planets, star systems, and various celestial objects. Discover new worlds, gather resources, and create your cosmic empire.
+Explore a vast procedurally generated universe filled with unique planets, star systems, nebulas, and black holes. Discover new worlds and gather resources.
 
 ## Features
 
@@ -10,11 +10,17 @@ Explore a vast procedurally generated universe filled with unique planets, star 
 - **Resource Gathering**: Collect resources found on planets to upgrade your empire unlock new abilities.
 - **Upgrades and Customization**: Acquire new technologies to enhance your exploration capabilities.
 
-## Installation (on Steam eventually)
+## Installation
 
 1. In Visual Studio, clone this repo
 2. Set to release mode
 3. Run the game
+
+## Controls
+
+1. Movement: W,A,S,D
+2. Navigation: I,J,K,L
+3. Selection: Space
 
 ## Contributing
 
