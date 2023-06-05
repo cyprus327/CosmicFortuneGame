@@ -64,6 +64,6 @@ internal static class PlanetRenderer {
             $" Foliage: {ch.Foliage :F4}\n" +
             $" Minerals: {ch.Minerals:F4}\n" +
             $" Gases: {ch.Gases:F4}";
-        g.DrawString($"Planet Info:\n{planetInfo}", Materials.InfoFont, Materials.WhiteBrush, 10, (int)max * 4 + 20);
+        g.DrawString(planetInfo, Materials.InfoFont, Materials.WhiteBrush, 10, (int)max * 4 + 20);
     }
 }
