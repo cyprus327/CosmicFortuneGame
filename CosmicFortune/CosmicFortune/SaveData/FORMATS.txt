@@ -1,0 +1,4 @@
+FORMATS:
+  PLANETS (p_[numbers].txt files): (index,tile index,water,foliage,gases,minerals) | (...) | ...
+  RESOURCES (resources.txt file):  (water, foliage, gases, minerals)
+  SEED (seed.txt file):            the seed represented by an unsigned integer 
