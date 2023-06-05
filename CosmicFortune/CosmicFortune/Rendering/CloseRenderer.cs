@@ -23,9 +23,7 @@ internal static class CloseRenderer {
         if (!system.StarExists) return;
 
         int planetCount = system.Planets.Count;
-        var bgCol = Color.FromArgb(220, Color.Black);
-        using var bgBrush = new SolidBrush(bgCol);
-        g.FillRectangle(bgBrush, 0, 0, windowSize.Width, windowSize.Height);
+        g.FillRectangle(Materials.BgBrush, 0, 0, windowSize.Width, windowSize.Height);
 
         string systemInfoStr =
             $"System Info:\n" +
@@ -91,9 +89,7 @@ internal static class CloseRenderer {
     }
 
     private static void DrawNebula(in Graphics g, in Size windowSize, in Nebula nebula) {
-        var bgCol = Color.FromArgb(220, Color.Black);
-        using var bgBrush = new SolidBrush(bgCol);
-        g.FillRectangle(bgBrush, 0, 0, windowSize.Width, windowSize.Height);
+        g.FillRectangle(Materials.BgBrush, 0, 0, windowSize.Width, windowSize.Height);
 
         (float x, float y) zero = (windowSize.Width / 2 - 180, windowSize.Height / 2 - 180);
         foreach (var cloud in nebula.Clouds) {
@@ -103,6 +99,8 @@ internal static class CloseRenderer {
     }
 
     private static void DrawBlackHole(in Graphics g, in Size windowSize, in BlackHole bh) {
+        g.FillRectangle(Materials.BgBrush, 0, 0, windowSize.Width, windowSize.Height);
+
         g.DrawEllipse(Materials.WhitePen,
             windowSize.Width / 2 - 240,
             windowSize.Height / 2 - 240,

@@ -9,4 +9,7 @@ internal static class Materials {
 
     public static Pen WhitePen => _whitePen;
     private static readonly Pen _whitePen = new Pen(_whiteBrush);
+
+    public static Brush BgBrush => _bgBrush;
+    private static readonly Brush _bgBrush = new SolidBrush(Color.FromArgb(220, Color.Black));
 }
