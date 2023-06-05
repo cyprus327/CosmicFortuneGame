@@ -1,19 +1,20 @@
-﻿using CosmicFortune.Game.Objects;
+﻿using CosmicFortune.Game;
+using CosmicFortune.Game.Objects;
 
 namespace CosmicFortune.Rendering;
 
 internal static class PlanetRenderer {
     private static readonly(int w, int h) _tileSize = (40, 20);
-    private static readonly Bitmap _blankTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}blankTile.png");
-    private static readonly Bitmap _selectorTile = (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}selectorTile.png");
+    private static readonly Bitmap _blankTile = (Bitmap)Image.FromFile($"{Galaxy.TilesPath}blankTile.png");
+    private static readonly Bitmap _selectorTile = (Bitmap)Image.FromFile($"{Galaxy.TilesPath}selectorTile.png");
     private static readonly Bitmap[] _coloredTiles = {                               // access indexes
-        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile1.png"), // 1
-        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile2.png"), // 2
-        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile3.png"), // 3
-        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile4.png"), // 4
-        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}grassTile5.png"), // 5
-        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}dirtTile1.png"),  // 6
-        (Bitmap)Image.FromFile($"Tiles{Path.DirectorySeparatorChar}stoneTile1.png"), // 7
+        (Bitmap)Image.FromFile($"{Galaxy.TilesPath}grassTile1.png"), // 1
+        (Bitmap)Image.FromFile($"{Galaxy.TilesPath}grassTile2.png"), // 2
+        (Bitmap)Image.FromFile($"{Galaxy.TilesPath}grassTile3.png"), // 3
+        (Bitmap)Image.FromFile($"{Galaxy.TilesPath}grassTile4.png"), // 4
+        (Bitmap)Image.FromFile($"{Galaxy.TilesPath}grassTile5.png"), // 5
+        (Bitmap)Image.FromFile($"{Galaxy.TilesPath}dirtTile1.png"),  // 6
+        (Bitmap)Image.FromFile($"{Galaxy.TilesPath}stoneTile1.png"), // 7
     };
 
     public static void DrawPlanet(this Graphics g, in Planet selectedPlanet, (float x, float y) offset, in (int x, int y) coords) {
@@ -38,7 +39,6 @@ internal static class PlanetRenderer {
                     case 0:
                         g.DrawImageUnscaled(_blankTile, sCoord.x, sCoord.y);
                         break;
-                    case 3:
                     case 4:
                     case 5:
                         g.DrawImageUnscaled(_coloredTiles[selectedPlanet[ind].TileInd - 1], sCoord.x, sCoord.y - 20);

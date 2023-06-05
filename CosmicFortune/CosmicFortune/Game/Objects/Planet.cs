@@ -21,7 +21,7 @@ internal sealed class Planet {
     public void InitializeWorld() {
         uint seed = (uint)((Coords.x & 0xFFFF) << 32 | (Coords.y & 0xFFFF));
         var rand = new LehmerRand(seed);
-        saveDataFilename = $"SaveData{Path.DirectorySeparatorChar}p_{seed}.txt";
+        saveDataFilename = $"{Galaxy.SaveDataPath}p_{seed}.txt";
 
         _world = new PlanetChunk[(int)Diameter * (int)Diameter];
 

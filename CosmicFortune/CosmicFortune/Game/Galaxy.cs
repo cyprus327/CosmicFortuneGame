@@ -7,6 +7,8 @@ namespace CosmicFortune.Game;
 internal sealed class Galaxy : Engine {
     public Galaxy((int x, int y) windowSize, string windowTitle) : base(windowSize, windowTitle) { }
 
+    private static readonly char _sep = Path.DirectorySeparatorChar;
+
     private const int SECTORSIZE = 16;
 
     private bool gameStarted = false, changedSeed = false;
@@ -28,8 +30,10 @@ internal sealed class Galaxy : Engine {
 
     private (double w, double f, double m, double g) totalResources;
 
-    public static string SeedFile { get; } = $"SaveData{Path.DirectorySeparatorChar}seed.txt";
-    public static string ResourcesFile { get; } = $"SaveData{Path.DirectorySeparatorChar}resources.txt";
+    public static readonly string TilesPath = $"..{_sep}..{_sep}..{_sep}Tiles{_sep}";
+    public static readonly string SaveDataPath = $"..{_sep}..{_sep}..{_sep}SaveData{_sep}";
+    public static readonly string SeedFile = $"{SaveDataPath}seed.txt";
+    public static readonly string ResourcesFile = $"{SaveDataPath}resources.txt";
 
     public override void Awake() {
         BackgroundColor = Color.Black;
