@@ -33,3 +33,6 @@ This project is licensed under the [GNU General Public License 3.0](LICENSE.txt)
 ## Acknowledgements
 
 - Special thanks to javidx9 for his videos.
+
+### p.s.
+I have no idea why there are 3 layers of nested "CosmicFortune" folders out of nowhere, but if you want to look at the changes made to a file you have to view the old file's history now.
