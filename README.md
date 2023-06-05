@@ -10,6 +10,17 @@ Explore a vast procedurally generated universe filled with unique planets, star 
 - **Resource Gathering**: Collect resources found on planets to upgrade your empire unlock new abilities.
 - **Upgrades and Customization**: Acquire new technologies to enhance your exploration capabilities.
 
+### Countless unique star systems
+[![System1.png](https://i.postimg.cc/fyxhkdN3/System1.png)](https://postimg.cc/9wFknrzV)
+[![System2.png](https://i.postimg.cc/h4xn2kdS/System2.png)](https://postimg.cc/yWV2drj5)
+
+### Harvest planet's resources
+[![Planet-Before-Edits.png](https://i.postimg.cc/sD4rr5mq/Planet-Before-Edits.png)](https://postimg.cc/fJyF7t6f)
+[![Planet-After-Edits.png](https://i.postimg.cc/pXHH4sfK/Planet-After-Edits.png)](https://postimg.cc/9zJKqtNf)
+
+### "Nebulas"
+[![Nebula.png](https://i.postimg.cc/L5dpHTrK/Nebula.png)](https://postimg.cc/ZBLgHrbV)
+
 ## Installation
 
 1. In Visual Studio, clone this repo
